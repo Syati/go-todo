@@ -22,6 +22,7 @@ func newDBCommand(load configLoader) *cobra.Command {
 		newMigrationCommand("down", "直前の migration を1件戻す（データ削除を伴う場合があります）", load),
 		newMigrationCommand("status", "migration の適用状況を表示", load),
 		newMigrationCreateCommand(),
+		newSeedCommand(load),
 	)
 	return db
 }

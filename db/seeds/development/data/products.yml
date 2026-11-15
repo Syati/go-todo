@@ -1,0 +1,44 @@
+# Same catalog and SKU codes as rails8-todo.
+products:
+  - name: オーガニックコットン T シャツ
+    description: 厚手の綿 100% の T シャツ。
+    status: on_sale
+    tax_rate: 10
+    skus:
+      - {code: TS-ORG-01, size: S, color: ホワイト, price_yen: 3300, stock_quantity: 12}
+      - {code: TS-ORG-02, size: M, color: ホワイト, price_yen: 3300, stock_quantity: 30}
+      - {code: TS-ORG-03, size: L, color: ホワイト, price_yen: 3300, stock_quantity: 8}
+      - {code: TS-ORG-04, size: S, color: ネイビー, price_yen: 3300, stock_quantity: 0}
+      - {code: TS-ORG-05, size: M, color: ネイビー, price_yen: 3300, stock_quantity: 21}
+      - {code: TS-ORG-06, size: L, color: ネイビー, price_yen: 3300, stock_quantity: 5}
+  - name: ランニングシューズ
+    description: 軽量のクッションソール。
+    status: on_sale
+    tax_rate: 10
+    skus:
+      - {code: SNK-RUN-01, size: 25.0cm, color: ブラック, price_yen: 12980, stock_quantity: 4}
+      - {code: SNK-RUN-02, size: 26.0cm, color: ブラック, price_yen: 12980, stock_quantity: 9}
+      - {code: SNK-RUN-03, size: 27.0cm, color: ブラック, price_yen: 12980, stock_quantity: 2}
+  - name: 有機緑茶 100g
+    description: 静岡県産の一番茶。
+    status: on_sale
+    tax_rate: 8
+    skus:
+      - {code: TEA-GRN-01, price_yen: 1080, stock_quantity: 120}
+  - name: コーヒー豆 ブレンド
+    description: 中深煎り。挽き方は豆のまま。
+    status: on_sale
+    tax_rate: 8
+    skus:
+      - {code: CF-BLD-01, size: 200g, price_yen: 1620, stock_quantity: 40}
+      - {code: CF-BLD-02, size: 500g, price_yen: 3780, stock_quantity: 15}
+  - name: マグカップ
+    description: 来月から販売予定。
+    status: draft
+    tax_rate: 10
+    skus:
+      - {code: MUG-STD-01, color: ベージュ, price_yen: 2200, stock_quantity: 0}
+  - name: キャンバストート（旧型）
+    status: discontinued
+    tax_rate: 10
+    skus: []

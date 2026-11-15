@@ -1,0 +1,45 @@
+# Development-only fixtures matching rails8-todo.
+password: password123
+admins:
+  - {email: admin@example.com, role: super_admin}
+  - {email: operator01@example.com, role: operator}
+  - {email: operator02@example.com, role: operator}
+  - {email: operator03@example.com, role: operator}
+  - {email: operator04@example.com, role: operator}
+  - {email: operator05@example.com, role: operator}
+  - {email: operator06@example.com, role: operator}
+  - {email: operator07@example.com, role: operator}
+  - {email: operator08@example.com, role: operator}
+  - {email: operator09@example.com, role: operator}
+  - {email: operator10@example.com, role: operator}
+  - {email: operator11@example.com, role: operator}
+  - {email: operator12@example.com, role: operator}
+  - {email: operator13@example.com, role: operator}
+  - {email: operator14@example.com, role: operator}
+  - {email: operator15@example.com, role: operator}
+  - {email: operator16@example.com, role: operator}
+  - {email: operator17@example.com, role: operator}
+  - {email: operator18@example.com, role: operator}
+  - {email: operator19@example.com, role: operator}
+  - {email: operator20@example.com, role: operator}
+  - {email: operator21@example.com, role: operator}
+  - {email: operator22@example.com, role: operator}
+  - {email: operator23@example.com, role: operator}
+  - {email: operator24@example.com, role: operator}
+  - {email: operator25@example.com, role: operator}
+  - {email: operator26@example.com, role: operator}
+  - {email: operator27@example.com, role: operator}
+  - {email: operator28@example.com, role: operator}
+  - {email: operator29@example.com, role: operator}
+  - {email: operator30@example.com, role: operator}
+  - {email: operator31@example.com, role: operator}
+  - {email: operator32@example.com, role: operator}
+  - {email: operator33@example.com, role: operator}
+  - {email: operator34@example.com, role: operator}
+  - {email: operator35@example.com, role: operator}
+  - {email: operator36@example.com, role: operator}
+  - {email: operator37@example.com, role: operator}
+  - {email: operator38@example.com, role: operator}
+  - {email: operator39@example.com, role: operator}
+  - {email: operator40@example.com, role: operator}
+  - {email: deleted@example.com, role: operator, deleted: true}

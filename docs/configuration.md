@@ -74,6 +74,8 @@ rtk proxy env ADDR=127.0.0.1:9091 ./bin/go-todo serve
 
 `bootstrap_email` と `bootstrap_password` は、使う場合は両方指定してください。
 `admin bootstrap` コマンドが空の DB に初期管理者を作成します。`serve` は管理者を作成しません。
+開発用の `db seed` は Rails 版と同じ固定の fixture を使い、これらの bootstrap 設定は使いません。
+通常のローカル準備は [seed の使い方](seeds.md) を参照してください。
 
 同梱の環境別設定は次のとおりです。
 
@@ -100,7 +102,7 @@ rtk proxy ./bin/go-todo --env production --config-dir /etc/go-todo/settings serv
 ```
 
 この例では `/etc/go-todo/settings/production.yml` と、存在する場合は `production.local.yml` を読みます。
-`--env` と `--config-dir` は、`serve`・`db up/down/status`・`admin bootstrap` で共通です。
+`--env` と `--config-dir` は、`serve`・`db up/down/status/seed`・`admin bootstrap` で共通です。
 `db new` とヘルプの表示には、設定の読み込みや DB 接続は不要です。
 `db up/down/status` は埋め込み SQL を使い、外部の migration ディレクトリは不要です。
 開発用の `db new` の出力先はカレントディレクトリの `db/migrations` で、このフラグでは変更されません。

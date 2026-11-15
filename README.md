@@ -30,10 +30,17 @@ mise、Docker Compose が必要です。リポジトリのルートで実行し�
 rtk mise install
 rtk make up
 rtk make migrate
+rtk make seed
+rtk make run
 ```
 
-初回のみ、空の DB に特権管理者を作成します。パスワードは12〜72バイトです。
-以下は zsh の例です。入力したパスワードは表示されません。
+<http://127.0.0.1:8080> を開き、開発用管理者 `admin@example.com` / `password123` でログインします。
+seed は `rails8-todo` と同じ開発用管理者・商品/SKU を登録します。再実行しても既存データは変更しません。
+データは `db/seeds/development/data/` の `admins.yml`・`products.yml` で管理し、バイナリに埋め込みます。
+対象データと追加手順は [seed の使い方](docs/seeds.md) を参照してください。
+
+開発環境以外で初期特権管理者を作成する場合は、`admin bootstrap` を使います。
+以下は zsh の例で、パスワードは12〜72バイトです。入力したパスワードは表示されません。
 
 ```zsh
 export BOOTSTRAP_EMAIL='admin@example.test'
@@ -41,10 +48,9 @@ read -rs 'BOOTSTRAP_PASSWORD?初期管理者のパスワード: '
 export BOOTSTRAP_PASSWORD
 rtk make bootstrap
 unset BOOTSTRAP_PASSWORD BOOTSTRAP_EMAIL
-rtk make run
 ```
 
-<http://127.0.0.1:8080> を開きます。bootstrap は管理者が存在する DB を変更しません。
+bootstrap は管理者が存在する DB を変更しません。
 パスワードを忘れた場合は、別の特権管理者に管理画面から更新してもらってください。
 
 DB は `127.0.0.1:5433` で待ち受けます。Compose の認証情報はローカル開発専用です。
@@ -54,7 +60,7 @@ DB は `127.0.0.1:5433` で待ち受けます。Compose の認証情報はロー
 
 `cmd/go-todo/main.go` が実行の入口で、Cobra の定義は `internal/cli` に置きます。
 `root.go` は共通フラグとコマンドの登録を担当し、各コマンドの定義・処理は
-`serve.go`・`db.go`・`admin.go` に分けています。
+`serve.go`・`db.go`・`seed.go`・`admin.go` に分けています。
 設定の読み込みは各コマンドの実行時に行うため、ヘルプ表示には設定ファイルや DB 接続が不要です。
 
 ```sh
@@ -64,6 +70,7 @@ rtk proxy ./bin/go-todo serve
 rtk proxy ./bin/go-todo db up
 rtk proxy ./bin/go-todo db status
 rtk proxy ./bin/go-todo db new add_product_fields
+rtk proxy ./bin/go-todo db seed
 rtk proxy ./bin/go-todo admin bootstrap
 rtk proxy ./bin/go-todo --env production serve
 rtk proxy ./bin/go-todo --env test --config-dir /path/to/config db status
@@ -199,4 +206,5 @@ internal/views/        templ のレイアウト・部品・各画面と生成物
 internal/store/        sqlc の生成物
 db/migrations/        goose migration と埋め込み定義
 db/queries/           sqlc の入力SQL
+db/seeds/             環境別 seed の入口と開発用データ
 ```

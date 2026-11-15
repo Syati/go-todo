@@ -9,7 +9,7 @@ import (
 )
 
 func TestCLIHelpDoesNotRequireDatabase(t *testing.T) {
-	for _, args := range [][]string{{"--help"}, {"serve", "--help"}, {"db", "--help"}, {"admin", "--help"}} {
+	for _, args := range [][]string{{"--help"}, {"serve", "--help"}, {"db", "--help"}, {"db", "seed", "--help"}, {"admin", "--help"}} {
 		cmd := NewRootCommand()
 		var out bytes.Buffer
 		cmd.SetOut(&out)
@@ -20,7 +20,7 @@ func TestCLIHelpDoesNotRequireDatabase(t *testing.T) {
 	}
 }
 func TestCLIRejectsUnknownCommandsAndExtraArguments(t *testing.T) {
-	for _, args := range [][]string{{"unknown"}, {"serve", "unexpected"}, {"db", "up", "unexpected"}, {"db", "new"}} {
+	for _, args := range [][]string{{"unknown"}, {"serve", "unexpected"}, {"db", "up", "unexpected"}, {"db", "seed", "unexpected"}, {"db", "new"}} {
 		cmd := NewRootCommand()
 		cmd.SetArgs(args)
 		require.Error(t, cmd.Execute())
