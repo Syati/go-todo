@@ -12,23 +12,24 @@ import (
 	"go-todo/internal/views/components"
 	productviews "go-todo/internal/views/products"
 	skuviews "go-todo/internal/views/skus"
+
+	"github.com/labstack/echo/v5"
 )
 
-func pagination(r *http.Request) (int, int) {
-	n, _ := strconv.Atoi(r.URL.Query().Get("page"))
+func pagination(page string) (int, int) {
+	n, _ := strconv.Atoi(page)
 	if n < 1 || n > 1000000 {
 		n = 1
 	}
 	return n, (n - 1) * 30
 }
 
-func (a *App) products(w http.ResponseWriter, r *http.Request) {
-	n, offset := pagination(r)
-	p := productviews.IndexData{Pagination: components.Pagination{Query: r.URL.Query().Get("q"), Status: r.URL.Query().Get("status"), Sort: r.URL.Query().Get("sort"), Page: n}}
-	rows, err := a.queries.ListProducts(r.Context(), store.ListProductsParams{Search: p.Query, StatusFilter: p.Status, Ascending: p.Sort == "asc", PageOffset: offset})
+func (a *App) products(c *echo.Context) error {
+	n, offset := pagination(c.QueryParam("page"))
+	p := productviews.IndexData{Pagination: components.Pagination{Query: c.QueryParam("q"), Status: c.QueryParam("status"), Sort: c.QueryParam("sort"), Page: n}}
+	rows, err := a.queries.ListProducts(c.Request().Context(), store.ListProductsParams{Search: p.Query, StatusFilter: p.Status, Ascending: p.Sort == "asc", PageOffset: offset})
 	if err != nil {
-		a.fail(w, r, err)
-		return
+		return err
 	}
 	for _, row := range rows {
 		p.Products = append(p.Products, productModel(row))
@@ -40,188 +41,179 @@ func (a *App) products(w http.ResponseWriter, r *http.Request) {
 	if n > 1 {
 		p.Previous = n - 1
 	}
-	a.render(w, r, productviews.Index(a.viewData(w, r, "title.products"), p), 200)
+	return a.render(c, productviews.Index(a.viewData(c, "title.products"), p), http.StatusOK)
 }
 
-func (a *App) findProduct(w http.ResponseWriter, r *http.Request) (Product, bool) {
-	n, err := id(r)
+func (a *App) findProduct(c *echo.Context) (Product, error) {
+	n, err := id(c)
 	if err != nil {
-		http.NotFound(w, r)
-		return Product{}, false
+		return Product{}, echo.ErrNotFound
 	}
-	row, err := a.queries.FindProduct(r.Context(), n)
-	p := productModel(row)
+	row, err := a.queries.FindProduct(c.Request().Context(), n)
 	if errors.Is(err, sql.ErrNoRows) {
-		http.NotFound(w, r)
-		return p, false
+		return Product{}, echo.ErrNotFound
 	}
 	if err != nil {
-		a.fail(w, r, err)
-		return p, false
+		return Product{}, err
 	}
-	return p, true
+	return productModel(row), nil
 }
 
-func (a *App) productShow(w http.ResponseWriter, r *http.Request) {
-	product, ok := a.findProduct(w, r)
-	if !ok {
-		return
+func (a *App) productShow(c *echo.Context) error {
+	product, err := a.findProduct(c)
+	if err != nil {
+		return err
 	}
 	var skus []SKU
-	rows, err := a.queries.ListSKUs(r.Context(), product.ID)
+	rows, err := a.queries.ListSKUs(c.Request().Context(), product.ID)
 	if err != nil {
-		a.fail(w, r, err)
-		return
+		return err
 	}
 	for _, row := range rows {
 		skus = append(skus, skuModel(row))
 	}
-	a.render(w, r, productviews.Show(a.viewData(w, r, product.Name), product, skus), 200)
+	return a.render(c, productviews.Show(a.viewData(c, product.Name), product, skus), http.StatusOK)
 }
-func (a *App) productForm(w http.ResponseWriter, r *http.Request) {
+
+func (a *App) productForm(c *echo.Context) error {
 	p := Product{Status: "draft", TaxRate: 10}
 	title := "title.product_new"
-	if r.PathValue("id") != "" {
-		product, ok := a.findProduct(w, r)
-		if !ok {
-			return
+	if c.Param("id") != "" {
+		product, err := a.findProduct(c)
+		if err != nil {
+			return err
 		}
 		p = product
 		title = "title.product_edit"
 	}
-	a.render(w, r, productviews.Form(a.viewData(w, r, title), p, ""), 200)
+	return a.render(c, productviews.Form(a.viewData(c, title), p, ""), http.StatusOK)
 }
-func (a *App) saveProduct(w http.ResponseWriter, r *http.Request) {
+
+func (a *App) saveProduct(c *echo.Context) error {
 	p := Product{}
-	if r.PathValue("id") != "" {
-		var ok bool
-		p, ok = a.findProduct(w, r)
-		if !ok {
-			return
+	if c.Param("id") != "" {
+		var err error
+		p, err = a.findProduct(c)
+		if err != nil {
+			return err
 		}
 	}
-	p.Name = strings.TrimSpace(r.PostForm.Get("name"))
-	p.Description = r.PostForm.Get("description")
-	p.Status = r.PostForm.Get("status")
-	p.TaxRate, _ = strconv.Atoi(r.PostForm.Get("tax_rate"))
+	p.Name = strings.TrimSpace(c.FormValue("name"))
+	p.Description = c.FormValue("description")
+	p.Status = c.FormValue("status")
+	p.TaxRate, _ = strconv.Atoi(c.FormValue("tax_rate"))
 	if err := p.Validate(); err != nil {
-		a.render(w, r, productviews.Form(a.viewData(w, r, "title.product_form"), p, a.inputError(r, err)), 422)
-		return
+		return a.render(c, productviews.Form(a.viewData(c, "title.product_form"), p, a.inputError(c, err)), http.StatusUnprocessableEntity)
 	}
 	var err error
 	if p.ID == 0 {
-		p.ID, err = a.queries.CreateProduct(r.Context(), store.CreateProductParams{Name: p.Name, Description: p.Description, Status: p.Status, TaxRate: p.TaxRate})
+		p.ID, err = a.queries.CreateProduct(c.Request().Context(), store.CreateProductParams{Name: p.Name, Description: p.Description, Status: p.Status, TaxRate: p.TaxRate})
 	} else {
-		err = a.queries.UpdateProduct(r.Context(), store.UpdateProductParams{ID: p.ID, Name: p.Name, Description: p.Description, Status: p.Status, TaxRate: p.TaxRate})
+		err = a.queries.UpdateProduct(c.Request().Context(), store.UpdateProductParams{ID: p.ID, Name: p.Name, Description: p.Description, Status: p.Status, TaxRate: p.TaxRate})
 	}
 	if err != nil {
-		a.fail(w, r, err)
-		return
+		return err
 	}
-	redirect(w, r, fmt.Sprintf("/console/products/%d", p.ID))
-}
-func (a *App) deleteProduct(w http.ResponseWriter, r *http.Request) {
-	p, ok := a.findProduct(w, r)
-	if !ok {
-		return
-	}
-	if err := a.queries.DeleteProduct(r.Context(), p.ID); err != nil {
-		a.fail(w, r, err)
-		return
-	}
-	redirect(w, r, "/console/products")
+	return redirect(c, fmt.Sprintf("/console/products/%d", p.ID))
 }
 
-func (a *App) findSKU(w http.ResponseWriter, r *http.Request, productID int64) (SKU, bool) {
-	n, err := strconv.ParseInt(r.PathValue("sku"), 10, 64)
-	if err != nil || n <= 0 {
-		http.NotFound(w, r)
-		return SKU{}, false
+func (a *App) deleteProduct(c *echo.Context) error {
+	p, err := a.findProduct(c)
+	if err != nil {
+		return err
 	}
-	row, err := a.queries.FindSKU(r.Context(), store.FindSKUParams{ID: n, ProductID: productID})
-	s := skuModel(row)
+	if err := a.queries.DeleteProduct(c.Request().Context(), p.ID); err != nil {
+		return err
+	}
+	return redirect(c, "/console/products")
+}
+
+func (a *App) findSKU(c *echo.Context, productID int64) (SKU, error) {
+	n, err := strconv.ParseInt(c.Param("sku"), 10, 64)
+	if err != nil || n <= 0 {
+		return SKU{}, echo.ErrNotFound
+	}
+	row, err := a.queries.FindSKU(c.Request().Context(), store.FindSKUParams{ID: n, ProductID: productID})
 	if errors.Is(err, sql.ErrNoRows) {
-		http.NotFound(w, r)
-		return s, false
+		return SKU{}, echo.ErrNotFound
 	}
 	if err != nil {
-		a.fail(w, r, err)
-		return s, false
+		return SKU{}, err
 	}
-	return s, true
+	return skuModel(row), nil
 }
-func (a *App) skuForm(w http.ResponseWriter, r *http.Request) {
-	p, ok := a.findProduct(w, r)
-	if !ok {
-		return
+
+func (a *App) skuForm(c *echo.Context) error {
+	p, err := a.findProduct(c)
+	if err != nil {
+		return err
 	}
 	s := SKU{ProductID: p.ID}
-	if r.PathValue("sku") != "" {
-		s, ok = a.findSKU(w, r, p.ID)
-		if !ok {
-			return
+	if c.Param("sku") != "" {
+		s, err = a.findSKU(c, p.ID)
+		if err != nil {
+			return err
 		}
 	}
-	a.render(w, r, skuviews.Form(a.viewData(w, r, "title.sku_form"), p, s, ""), 200)
+	return a.render(c, skuviews.Form(a.viewData(c, "title.sku_form"), p, s, ""), http.StatusOK)
 }
-func (a *App) saveSKU(w http.ResponseWriter, r *http.Request) {
-	p, ok := a.findProduct(w, r)
-	if !ok {
-		return
+
+func (a *App) saveSKU(c *echo.Context) error {
+	p, err := a.findProduct(c)
+	if err != nil {
+		return err
 	}
 	s := SKU{ProductID: p.ID}
-	if r.PathValue("sku") != "" {
-		s, ok = a.findSKU(w, r, p.ID)
-		if !ok {
-			return
+	if c.Param("sku") != "" {
+		s, err = a.findSKU(c, p.ID)
+		if err != nil {
+			return err
 		}
 	}
-	s.Code = r.PostForm.Get("code")
-	s.Size = r.PostForm.Get("size")
-	s.Color = r.PostForm.Get("color")
+	s.Code = c.FormValue("code")
+	s.Size = c.FormValue("size")
+	s.Color = c.FormValue("color")
 	s.Normalize()
-	price, priceErr := strconv.ParseInt(r.PostForm.Get("price_yen"), 10, 64)
-	stock, stockErr := strconv.ParseInt(r.PostForm.Get("stock_quantity"), 10, 64)
+	price, priceErr := strconv.ParseInt(c.FormValue("price_yen"), 10, 64)
+	stock, stockErr := strconv.ParseInt(c.FormValue("stock_quantity"), 10, 64)
 	s.PriceYen = price
 	s.StockQuantity = stock
-	err := s.Validate()
+	err = s.Validate()
 	if priceErr != nil || stockErr != nil {
 		err = errors.New("価格と在庫は整数で入力してください。")
 	}
 	if err == nil {
 		if s.ID == 0 {
-			err = a.queries.CreateSKU(r.Context(), store.CreateSKUParams{ProductID: s.ProductID, Code: s.Code, Size: s.Size, Color: s.Color, PriceYen: s.PriceYen, StockQuantity: s.StockQuantity})
+			err = a.queries.CreateSKU(c.Request().Context(), store.CreateSKUParams{ProductID: s.ProductID, Code: s.Code, Size: s.Size, Color: s.Color, PriceYen: s.PriceYen, StockQuantity: s.StockQuantity})
 		} else {
-			err = a.queries.UpdateSKU(r.Context(), store.UpdateSKUParams{ID: s.ID, ProductID: s.ProductID, Code: s.Code, Size: s.Size, Color: s.Color, PriceYen: s.PriceYen, StockQuantity: s.StockQuantity})
+			err = a.queries.UpdateSKU(c.Request().Context(), store.UpdateSKUParams{ID: s.ID, ProductID: s.ProductID, Code: s.Code, Size: s.Size, Color: s.Color, PriceYen: s.PriceYen, StockQuantity: s.StockQuantity})
 		}
 		if err != nil {
 			var pgErr interface{ SQLState() string }
 			if errors.As(err, &pgErr) && pgErr.SQLState() == "23505" {
 				err = errors.New(dbMessage(err))
 			} else {
-				a.fail(w, r, err)
-				return
+				return err
 			}
 		}
 	}
 	if err != nil {
-		a.render(w, r, skuviews.Form(a.viewData(w, r, "title.sku_form"), p, s, a.inputError(r, err)), 422)
-		return
+		return a.render(c, skuviews.Form(a.viewData(c, "title.sku_form"), p, s, a.inputError(c, err)), http.StatusUnprocessableEntity)
 	}
-	redirect(w, r, fmt.Sprintf("/console/products/%d", p.ID))
+	return redirect(c, fmt.Sprintf("/console/products/%d", p.ID))
 }
-func (a *App) deleteSKU(w http.ResponseWriter, r *http.Request) {
-	p, ok := a.findProduct(w, r)
-	if !ok {
-		return
+
+func (a *App) deleteSKU(c *echo.Context) error {
+	p, err := a.findProduct(c)
+	if err != nil {
+		return err
 	}
-	s, ok := a.findSKU(w, r, p.ID)
-	if !ok {
-		return
+	s, err := a.findSKU(c, p.ID)
+	if err != nil {
+		return err
 	}
-	if err := a.queries.DeleteSKU(r.Context(), store.DeleteSKUParams{ID: s.ID, ProductID: p.ID}); err != nil {
-		a.fail(w, r, err)
-		return
+	if err := a.queries.DeleteSKU(c.Request().Context(), store.DeleteSKUParams{ID: s.ID, ProductID: p.ID}); err != nil {
+		return err
 	}
-	redirect(w, r, fmt.Sprintf("/console/products/%d", p.ID))
+	return redirect(c, fmt.Sprintf("/console/products/%d", p.ID))
 }

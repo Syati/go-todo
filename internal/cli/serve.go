@@ -10,6 +10,7 @@ import (
 	"go-todo/internal/app"
 	"go-todo/internal/config"
 
+	"github.com/labstack/echo/v5"
 	"github.com/spf13/cobra"
 )
 
@@ -35,18 +36,22 @@ func serve(ctx context.Context, cfg config.Config) (runErr error) {
 	}
 	defer func() { runErr = errors.Join(runErr, application.Close()) }()
 	address := cfg.Addr
-	server := &http.Server{Addr: address, Handler: application.Handler(), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second}
-	errCh := make(chan error, 1)
-	go func() { slog.Info("listening", "address", address); errCh <- server.ListenAndServe() }()
-	select {
-	case err := <-errCh:
-		if errors.Is(err, http.ErrServerClosed) {
+	startConfig := echo.StartConfig{
+		Address:         address,
+		HideBanner:      true,
+		GracefulTimeout: 10 * time.Second,
+		BeforeServeFunc: func(server *http.Server) error {
+			server.ReadHeaderTimeout = 5 * time.Second
+			server.ReadTimeout = 15 * time.Second
+			server.WriteTimeout = 30 * time.Second
+			server.IdleTimeout = 60 * time.Second
 			return nil
-		}
-		return err
-	case <-ctx.Done():
-		shutdown, stop := context.WithTimeout(context.Background(), 10*time.Second)
-		defer stop()
-		return server.Shutdown(shutdown)
+		},
 	}
+	slog.Info("listening", "address", address)
+	err = startConfig.Start(ctx, application.Echo())
+	if errors.Is(err, http.ErrServerClosed) {
+		return nil
+	}
+	return err
 }

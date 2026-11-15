@@ -11,16 +11,16 @@ import (
 	adminviews "go-todo/internal/views/admins"
 	"go-todo/internal/views/components"
 
+	"github.com/labstack/echo/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (a *App) admins(w http.ResponseWriter, r *http.Request) {
-	n, offset := pagination(r)
-	p := adminviews.IndexData{Pagination: components.Pagination{Query: r.URL.Query().Get("q"), Page: n, Sort: r.URL.Query().Get("sort")}}
-	rows, err := a.queries.ListAdmins(r.Context(), store.ListAdminsParams{Search: p.Query, Ascending: p.Sort == "asc", PageOffset: offset})
+func (a *App) admins(c *echo.Context) error {
+	n, offset := pagination(c.QueryParam("page"))
+	p := adminviews.IndexData{Pagination: components.Pagination{Query: c.QueryParam("q"), Page: n, Sort: c.QueryParam("sort")}}
+	rows, err := a.queries.ListAdmins(c.Request().Context(), store.ListAdminsParams{Search: p.Query, Ascending: p.Sort == "asc", PageOffset: offset})
 	if err != nil {
-		a.fail(w, r, err)
-		return
+		return err
 	}
 	for _, row := range rows {
 		p.Admins = append(p.Admins, adminModel(row))
@@ -32,67 +32,67 @@ func (a *App) admins(w http.ResponseWriter, r *http.Request) {
 	if n > 1 {
 		p.Previous = n - 1
 	}
-	a.render(w, r, adminviews.Index(a.viewData(w, r, "title.admins"), p), 200)
+	return a.render(c, adminviews.Index(a.viewData(c, "title.admins"), p), http.StatusOK)
 }
-func (a *App) findAdmin(w http.ResponseWriter, r *http.Request) (Admin, bool) {
-	n, err := id(r)
+
+func (a *App) findAdmin(c *echo.Context) (Admin, error) {
+	n, err := id(c)
 	if err != nil {
-		http.NotFound(w, r)
-		return Admin{}, false
+		return Admin{}, echo.ErrNotFound
 	}
-	row, err := a.queries.FindAdmin(r.Context(), n)
-	admin := adminModel(row)
+	row, err := a.queries.FindAdmin(c.Request().Context(), n)
 	if errors.Is(err, sql.ErrNoRows) {
-		http.NotFound(w, r)
-		return admin, false
+		return Admin{}, echo.ErrNotFound
 	}
 	if err != nil {
-		a.fail(w, r, err)
-		return admin, false
+		return Admin{}, err
 	}
-	return admin, true
+	return adminModel(row), nil
 }
-func (a *App) adminShow(w http.ResponseWriter, r *http.Request) {
-	target, ok := a.findAdmin(w, r)
-	if !ok {
-		return
+
+func (a *App) adminShow(c *echo.Context) error {
+	target, err := a.findAdmin(c)
+	if err != nil {
+		return err
 	}
-	a.render(w, r, adminviews.Show(a.viewData(w, r, "title.admin_detail"), target), 200)
+	return a.render(c, adminviews.Show(a.viewData(c, "title.admin_detail"), target), http.StatusOK)
 }
-func (a *App) adminForm(w http.ResponseWriter, r *http.Request) {
+
+func (a *App) adminForm(c *echo.Context) error {
 	target := Admin{Role: "operator"}
-	if r.PathValue("id") != "" {
-		var ok bool
-		target, ok = a.findAdmin(w, r)
-		if !ok {
-			return
+	if c.Param("id") != "" {
+		var err error
+		target, err = a.findAdmin(c)
+		if err != nil {
+			return err
 		}
 	}
-	a.render(w, r, adminviews.Form(a.viewData(w, r, "title.admin_form"), target, ""), 200)
+	return a.render(c, adminviews.Form(a.viewData(c, "title.admin_form"), target, ""), http.StatusOK)
 }
-func (a *App) saveAdmin(w http.ResponseWriter, r *http.Request) {
+
+func (a *App) saveAdmin(c *echo.Context) error {
 	target := Admin{Role: "operator"}
-	current := r.Context().Value(adminContextKey{}).(*Admin)
-	if r.PathValue("id") != "" {
-		var ok bool
-		target, ok = a.findAdmin(w, r)
-		if !ok {
-			return
+	current := c.Get(adminContextKey).(*Admin)
+	if c.Param("id") != "" {
+		var err error
+		target, err = a.findAdmin(c)
+		if err != nil {
+			return err
 		}
 	}
-	target.Email = strings.ToLower(strings.TrimSpace(r.PostForm.Get("email")))
+	target.Email = strings.ToLower(strings.TrimSpace(c.FormValue("email")))
 	// New accounts are operators. Existing admins cannot change their own role.
 	if target.ID != 0 && target.ID != current.ID {
-		target.Role = r.PostForm.Get("role")
+		target.Role = c.FormValue("role")
 	}
-	password := r.PostForm.Get("password")
+	password := c.FormValue("password")
 	err := validateEmail(target.Email)
 	if err == nil && target.Role != "operator" && target.Role != "super_admin" {
 		err = errors.New("権限が不正です。")
 	}
 	if err == nil && (target.ID == 0 || password != "") {
 		err = validatePassword(password)
-		if err == nil && password != r.PostForm.Get("password_confirmation") {
+		if err == nil && password != c.FormValue("password_confirmation") {
 			err = errors.New("確認用パスワードが一致しません。")
 		}
 	}
@@ -103,19 +103,18 @@ func (a *App) saveAdmin(w http.ResponseWriter, r *http.Request) {
 		}
 		if err == nil {
 			if target.ID == 0 {
-				target.ID, err = a.queries.CreateAdmin(r.Context(), store.CreateAdminParams{Email: target.Email, PasswordHash: string(hash)})
+				target.ID, err = a.queries.CreateAdmin(c.Request().Context(), store.CreateAdminParams{Email: target.Email, PasswordHash: string(hash)})
 			} else {
 				// Revoke existing sessions when credentials or permissions change.
-				tx, txErr := a.db.BeginTx(r.Context(), nil)
+				tx, txErr := a.db.BeginTx(c.Request().Context(), nil)
 				if txErr != nil {
-					a.fail(w, r, txErr)
-					return
+					return txErr
 				}
 				defer func() { _ = tx.Rollback() }() // Commit 後の ErrTxDone は無視する。
 				q := a.queries.WithTx(tx)
-				err = q.UpdateAdmin(r.Context(), store.UpdateAdminParams{ID: target.ID, Email: target.Email, Role: target.Role, NewPasswordHash: string(hash)})
+				err = q.UpdateAdmin(c.Request().Context(), store.UpdateAdminParams{ID: target.ID, Email: target.Email, Role: target.Role, NewPasswordHash: string(hash)})
 				if err == nil {
-					err = q.DeleteAdminSessions(r.Context(), target.ID)
+					err = q.DeleteAdminSessions(c.Request().Context(), target.ID)
 				}
 				if err == nil {
 					err = tx.Commit()
@@ -127,30 +126,27 @@ func (a *App) saveAdmin(w http.ResponseWriter, r *http.Request) {
 			if errors.As(err, &pgErr) && pgErr.SQLState() == "23505" {
 				err = errors.New(dbMessage(err))
 			} else {
-				a.fail(w, r, err)
-				return
+				return err
 			}
 		}
 	}
 	if err != nil {
-		a.render(w, r, adminviews.Form(a.viewData(w, r, "title.admin_form"), target, a.inputError(r, err)), 422)
-		return
+		return a.render(c, adminviews.Form(a.viewData(c, "title.admin_form"), target, a.inputError(c, err)), http.StatusUnprocessableEntity)
 	}
-	redirect(w, r, fmt.Sprintf("/console/admins/%d", target.ID))
+	return redirect(c, fmt.Sprintf("/console/admins/%d", target.ID))
 }
-func (a *App) deleteAdmin(w http.ResponseWriter, r *http.Request) {
-	target, ok := a.findAdmin(w, r)
-	if !ok {
-		return
+
+func (a *App) deleteAdmin(c *echo.Context) error {
+	target, err := a.findAdmin(c)
+	if err != nil {
+		return err
 	}
-	current := r.Context().Value(adminContextKey{}).(*Admin)
+	current := c.Get(adminContextKey).(*Admin)
 	if target.ID == current.ID {
-		http.Error(w, a.message(r, "error.self_delete"), http.StatusUnprocessableEntity)
-		return
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, "error.self_delete")
 	}
-	if err := a.queries.DiscardAdmin(r.Context(), target.ID); err != nil {
-		a.fail(w, r, err)
-		return
+	if err := a.queries.DiscardAdmin(c.Request().Context(), target.ID); err != nil {
+		return err
 	}
-	redirect(w, r, "/console/admins")
+	return redirect(c, "/console/admins")
 }

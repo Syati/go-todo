@@ -5,79 +5,90 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"go-todo/assets"
 
 	"github.com/labstack/echo/v5"
+	"github.com/labstack/echo/v5/middleware"
 )
 
 func (a *App) routes() *echo.Echo {
 	e := echo.New()
+	e.HTTPErrorHandler = a.handleHTTPError
+	e.Use(middleware.Recover())
 	e.Use(a.localize)
+	e.Use(middleware.BodyLimit(64 << 10))
+	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
+		XSSProtection:         "",
+		ContentTypeNosniff:    "nosniff",
+		XFrameOptions:         "DENY",
+		ContentSecurityPolicy: "default-src 'self'; style-src 'self'; script-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'",
+		ReferrerPolicy:        "same-origin",
+	}))
 	e.Use(echo.WrapMiddleware(http.NewCrossOriginProtection().Handler))
-	e.Use(a.securityHeaders)
-
+	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
+		TokenLookup:    "form:csrf",
+		ContextKey:     "csrf",
+		CookieName:     "csrf",
+		CookiePath:     "/",
+		CookieSecure:   a.secure,
+		CookieHTTPOnly: true,
+		CookieSameSite: http.SameSiteLaxMode,
+		Skipper: func(c *echo.Context) bool {
+			path := c.Request().URL.Path
+			return path == "/up" || strings.HasPrefix(path, "/static/")
+		},
+	}))
 	static, _ := fs.Sub(assets.Files, "static")
-	e.GET("/static/*", echo.WrapHandler(http.StripPrefix("/static/", http.FileServer(http.FS(static)))))
-	e.GET("/up", echo.WrapHandler(http.HandlerFunc(a.health)))
+	e.StaticFS("/static", static)
+	e.GET("/up", a.health)
 
-	e.GET("/auth/sign_in", echoHandler(a.login))
-	e.POST("/auth/sign_in", echoHandler(a.login))
+	e.GET("/auth/sign_in", a.login)
+	e.POST("/auth/sign_in", a.login)
 	authenticated := e.Group("")
 	authenticated.Use(a.requireAdmin(false))
-	authenticated.POST("/auth/sign_out", echoHandler(a.logout))
-	authenticated.GET("/", echoHandler(a.dashboard))
-	authenticated.GET("/faq", echoHandler(a.faq))
+	authenticated.POST("/auth/sign_out", a.logout)
+	authenticated.GET("/", a.dashboard)
+	authenticated.GET("/faq", a.faq)
 
 	console := e.Group("/console")
 	console.Use(a.requireAdmin(false))
 	products := console.Group("/products")
-	products.GET("", echoHandler(a.products))
-	products.GET("/new", echoHandler(a.productForm))
-	products.POST("", echoHandler(a.saveProduct))
-	products.GET("/:id", echoHandler(a.productShow))
-	products.GET("/:id/edit", echoHandler(a.productForm))
-	products.POST("/:id", echoHandler(a.saveProduct))
-	products.POST("/:id/delete", echoHandler(a.deleteProduct))
-	products.GET("/:id/skus/new", echoHandler(a.skuForm))
-	products.POST("/:id/skus", echoHandler(a.saveSKU))
-	products.GET("/:id/skus/:sku/edit", echoHandler(a.skuForm))
-	products.POST("/:id/skus/:sku", echoHandler(a.saveSKU))
-	products.POST("/:id/skus/:sku/delete", echoHandler(a.deleteSKU))
+	products.GET("", a.products)
+	products.GET("/new", a.productForm)
+	products.POST("", a.saveProduct)
+	products.GET("/:id", a.productShow)
+	products.GET("/:id/edit", a.productForm)
+	products.POST("/:id", a.saveProduct)
+	products.POST("/:id/delete", a.deleteProduct)
+	products.GET("/:id/skus/new", a.skuForm)
+	products.POST("/:id/skus", a.saveSKU)
+	products.GET("/:id/skus/:sku/edit", a.skuForm)
+	products.POST("/:id/skus/:sku", a.saveSKU)
+	products.POST("/:id/skus/:sku/delete", a.deleteSKU)
 
 	admins := console.Group("/admins")
-	admins.GET("", echoHandler(a.admins))
-	admins.GET("/:id", echoHandler(a.adminShow))
+	admins.GET("", a.admins)
+	admins.GET("/:id", a.adminShow)
 	superAdmins := admins.Group("")
 	superAdmins.Use(a.requireAdmin(true))
-	superAdmins.GET("/new", echoHandler(a.adminForm))
-	superAdmins.POST("", echoHandler(a.saveAdmin))
-	superAdmins.GET("/:id/edit", echoHandler(a.adminForm))
-	superAdmins.POST("/:id", echoHandler(a.saveAdmin))
-	superAdmins.POST("/:id/delete", echoHandler(a.deleteAdmin))
+	superAdmins.GET("/new", a.adminForm)
+	superAdmins.POST("", a.saveAdmin)
+	superAdmins.GET("/:id/edit", a.adminForm)
+	superAdmins.POST("/:id", a.saveAdmin)
+	superAdmins.POST("/:id/delete", a.deleteAdmin)
 
 	return e
 }
 
-func echoHandler(handler http.HandlerFunc) echo.HandlerFunc {
-	return func(c *echo.Context) error {
-		r := c.Request()
-		r.SetPathValue("id", c.Param("id"))
-		r.SetPathValue("sku", c.Param("sku"))
-		handler(c.Response(), r)
-		return nil
-	}
-}
-
-func (a *App) health(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), time.Second)
+func (a *App) health(c *echo.Context) error {
+	ctx, cancel := context.WithTimeout(c.Request().Context(), time.Second)
 	defer cancel()
 	if err := a.db.PingContext(ctx); err != nil {
-		http.Error(w, "unavailable", http.StatusServiceUnavailable)
-		return
+		slog.Warn("health check failed", "error", err)
+		return c.String(http.StatusServiceUnavailable, "unavailable\n")
 	}
-	if _, err := w.Write([]byte("ok\n")); err != nil {
-		slog.Warn("health response write failed", "error", err)
-	}
+	return c.String(http.StatusOK, "ok\n")
 }

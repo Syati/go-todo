@@ -7,8 +7,6 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
-	"fmt"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -25,6 +23,7 @@ import (
 	"github.com/a-h/templ"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/labstack/echo/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -36,6 +35,7 @@ type App struct {
 	attempts     map[string]attempt
 	dummyHash    []byte
 	translations *i18n.Bundle
+	router       *echo.Echo
 }
 type attempt struct {
 	Count int
@@ -66,7 +66,9 @@ func Open(ctx context.Context, url string, secure bool) (*App, error) {
 	if err != nil {
 		return nil, errors.Join(err, db.Close())
 	}
-	return &App{db: db, queries: store.New(db), secure: secure, attempts: map[string]attempt{}, dummyHash: dummy, translations: translations}, nil
+	application := &App{db: db, queries: store.New(db), secure: secure, attempts: map[string]attempt{}, dummyHash: dummy, translations: translations}
+	application.router = application.routes()
+	return application, nil
 }
 
 func (a *App) Close() error { return a.db.Close() }
@@ -100,41 +102,28 @@ func (a *App) Bootstrap(ctx context.Context, email, password string) error {
 	return tx.Commit()
 }
 
-func (a *App) Handler() http.Handler {
-	return a.routes()
-}
+func (a *App) Echo() *echo.Echo { return a.router }
 
-func (a *App) viewData(w http.ResponseWriter, r *http.Request, title string) views.Page {
-	localizer := a.localizer(r)
+func (a *App) viewData(c *echo.Context, title string) views.Page {
+	localizer := a.localizer(c)
 	p := views.Page{Title: localizer.Message(title), Locale: localizer.Language(), T: localizer.Message}
-	if admin, ok := r.Context().Value(adminContextKey{}).(*Admin); ok {
+	if admin, ok := c.Get(adminContextKey).(*Admin); ok {
 		p.Admin = *admin
 	}
-	cookie, err := r.Cookie("csrf")
-	if err != nil || len(cookie.Value) != 64 {
-		p.CSRF = randomToken()
-		a.cookie(w, "csrf", p.CSRF, 0)
-	} else {
-		p.CSRF = cookie.Value
-	}
+	p.CSRF, _ = c.Get("csrf").(string)
 	return p
 }
 
-func (a *App) render(w http.ResponseWriter, r *http.Request, component templ.Component, status int) {
+func (a *App) render(c *echo.Context, component templ.Component, status int) error {
 	var out strings.Builder
-	if err := component.Render(r.Context(), &out); err != nil {
-		a.fail(w, r, err)
-		return
+	if err := component.Render(c.Request().Context(), &out); err != nil {
+		return err
 	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(status)
-	if _, err := fmt.Fprint(w, out.String()); err != nil {
-		slog.Warn("response write failed", "error", err)
-	}
+	return c.HTMLBlob(status, []byte(out.String()))
 }
 
-func (a *App) cookie(w http.ResponseWriter, name, value string, age int) {
-	http.SetCookie(w, &http.Cookie{Name: name, Value: value, Path: "/", HttpOnly: true, Secure: a.secure, SameSite: http.SameSiteLaxMode, MaxAge: age})
+func (a *App) cookie(c *echo.Context, name, value string, age int) {
+	c.SetCookie(&http.Cookie{Name: name, Value: value, Path: "/", HttpOnly: true, Secure: a.secure, SameSite: http.SameSiteLaxMode, MaxAge: age})
 }
 func randomToken() string {
 	b := make([]byte, 32)
@@ -144,10 +133,10 @@ func randomToken() string {
 	return hex.EncodeToString(b)
 }
 func tokenHash(s string) string { hash := sha256.Sum256([]byte(s)); return hex.EncodeToString(hash[:]) }
-func (a *App) message(r *http.Request, id string) string {
-	return a.localizer(r).Message(id)
+func (a *App) message(c *echo.Context, id string) string {
+	return a.localizer(c).Message(id)
 }
-func (a *App) inputError(r *http.Request, err error) string {
+func (a *App) inputError(c *echo.Context, err error) string {
 	keys := map[string]string{
 		"メールアドレスを正しく入力してください。":                     "error.email_invalid",
 		"パスワードは12〜72バイトで入力してください。":                 "error.password_length",
@@ -167,21 +156,17 @@ func (a *App) inputError(r *http.Request, err error) string {
 	if !ok {
 		key = "error.invalid_input"
 	}
-	return a.message(r, key)
+	return a.message(c, key)
 }
-func (a *App) fail(w http.ResponseWriter, r *http.Request, err error) {
-	slog.Error("request failed", "error", err)
-	http.Error(w, a.message(r, "error.internal"), 500)
-}
-func id(r *http.Request) (int64, error) {
-	n, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+func id(c *echo.Context) (int64, error) {
+	n, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err == nil && n <= 0 {
 		err = errors.New("invalid id")
 	}
 	return n, err
 }
-func redirect(w http.ResponseWriter, r *http.Request, path string) {
-	http.Redirect(w, r, path, http.StatusSeeOther)
+func redirect(c *echo.Context, path string) error {
+	return c.Redirect(http.StatusSeeOther, path)
 }
 func dbMessage(err error) string {
 	var pg *pgconn.PgError
@@ -191,12 +176,11 @@ func dbMessage(err error) string {
 	return "入力内容を確認してください。"
 }
 
-func (a *App) login(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" || r.Method == "HEAD" {
-		a.render(w, r, authviews.Login(a.viewData(w, r, "title.login"), ""), 200)
-		return
+func (a *App) login(c *echo.Context) error {
+	if c.Request().Method == http.MethodGet || c.Request().Method == http.MethodHead {
+		return a.render(c, authviews.Login(a.viewData(c, "title.login"), ""), http.StatusOK)
 	}
-	email := strings.ToLower(strings.TrimSpace(r.PostForm.Get("email")))
+	email := strings.ToLower(strings.TrimSpace(c.FormValue("email")))
 	// Bound the in-process limiter, including attempts for unknown accounts.
 	a.mu.Lock()
 	now := time.Now()
@@ -208,8 +192,7 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 	item := a.attempts[email]
 	if item.Count >= 5 || (len(a.attempts) >= 10000 && item.Count == 0) {
 		a.mu.Unlock()
-		a.render(w, r, authviews.Login(a.viewData(w, r, "title.login"), a.message(r, "error.login_throttled")), 429)
-		return
+		return a.render(c, authviews.Login(a.viewData(c, "title.login"), a.message(c, "error.login_throttled")), http.StatusTooManyRequests)
 	}
 	item.Count++
 	if item.Until.IsZero() {
@@ -217,64 +200,58 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 	}
 	a.attempts[email] = item
 	a.mu.Unlock()
-	admin, err := a.queries.FindLoginAdmin(r.Context(), email)
+	admin, err := a.queries.FindLoginAdmin(c.Request().Context(), email)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		a.fail(w, r, err)
-		return
+		return err
 	}
 	compare := []byte(admin.PasswordHash)
 	if admin.PasswordHash == "" {
 		compare = a.dummyHash
 	}
-	passwordErr := bcrypt.CompareHashAndPassword(compare, []byte(r.PostForm.Get("password")))
+	passwordErr := bcrypt.CompareHashAndPassword(compare, []byte(c.FormValue("password")))
 	if err != nil || passwordErr != nil {
-		a.render(w, r, authviews.Login(a.viewData(w, r, "title.login"), a.message(r, "error.login_invalid")), 422)
-		return
+		return a.render(c, authviews.Login(a.viewData(c, "title.login"), a.message(c, "error.login_invalid")), http.StatusUnprocessableEntity)
 	}
 	token := randomToken()
-	tx, err := a.db.BeginTx(r.Context(), nil)
+	tx, err := a.db.BeginTx(c.Request().Context(), nil)
 	if err != nil {
-		a.fail(w, r, err)
-		return
+		return err
 	}
 	defer func() { _ = tx.Rollback() }() // Commit 後の ErrTxDone は無視する。
 	q := a.queries.WithTx(tx)
-	err = q.DeleteExpiredSessions(r.Context())
+	err = q.DeleteExpiredSessions(c.Request().Context())
 	if err == nil {
-		err = q.CreateSession(r.Context(), store.CreateSessionParams{TokenHash: tokenHash(token), AdminID: admin.ID})
+		err = q.CreateSession(c.Request().Context(), store.CreateSessionParams{TokenHash: tokenHash(token), AdminID: admin.ID})
 	}
 	if err == nil {
 		err = tx.Commit()
 	}
 	if err != nil {
-		a.fail(w, r, err)
-		return
+		return err
 	}
 	a.mu.Lock()
 	delete(a.attempts, email)
 	a.mu.Unlock()
-	a.cookie(w, "session", token, 12*3600)
-	a.cookie(w, "csrf", randomToken(), 0)
-	redirect(w, r, "/")
+	a.cookie(c, "session", token, 12*3600)
+	a.cookie(c, "csrf", randomToken(), 0)
+	return redirect(c, "/")
 }
-func (a *App) logout(w http.ResponseWriter, r *http.Request) {
-	cookie, _ := r.Cookie("session")
-	if err := a.queries.DeleteSession(r.Context(), tokenHash(cookie.Value)); err != nil {
-		a.fail(w, r, err)
-		return
+func (a *App) logout(c *echo.Context) error {
+	cookie, _ := c.Cookie("session")
+	if err := a.queries.DeleteSession(c.Request().Context(), tokenHash(cookie.Value)); err != nil {
+		return err
 	}
-	a.cookie(w, "session", "", -1)
-	a.cookie(w, "csrf", "", -1)
-	redirect(w, r, "/auth/sign_in")
+	a.cookie(c, "session", "", -1)
+	a.cookie(c, "csrf", "", -1)
+	return redirect(c, "/auth/sign_in")
 }
-func (a *App) dashboard(w http.ResponseWriter, r *http.Request) {
-	count, err := a.queries.CountProducts(r.Context())
+func (a *App) dashboard(c *echo.Context) error {
+	count, err := a.queries.CountProducts(c.Request().Context())
 	if err != nil {
-		a.fail(w, r, err)
-		return
+		return err
 	}
-	a.render(w, r, dashboardviews.Index(a.viewData(w, r, "title.dashboard"), count), 200)
+	return a.render(c, dashboardviews.Index(a.viewData(c, "title.dashboard"), count), http.StatusOK)
 }
-func (a *App) faq(w http.ResponseWriter, r *http.Request) {
-	a.render(w, r, faqviews.Index(a.viewData(w, r, "title.faq")), 200)
+func (a *App) faq(c *echo.Context) error {
+	return a.render(c, faqviews.Index(a.viewData(c, "title.faq")), http.StatusOK)
 }

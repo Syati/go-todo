@@ -63,7 +63,7 @@ type browser struct {
 }
 
 func newBrowser(t *testing.T, a *App) *browser {
-	return &browser{t: t, handler: a.Handler(), cookies: map[string]*http.Cookie{}}
+	return &browser{t: t, handler: a.Echo(), cookies: map[string]*http.Cookie{}}
 }
 func (b *browser) request(method, path string, form url.Values) *httptest.ResponseRecorder {
 	b.t.Helper()
@@ -193,13 +193,13 @@ func TestLoginCSRFAndRateLimit(t *testing.T) {
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	r.AddCookie(b.cookies["csrf"])
 	w := httptest.NewRecorder()
-	a.Handler().ServeHTTP(w, r)
+	b.handler.ServeHTTP(w, r)
 	assert.Equal(t, 403, w.Code)
 	r = httptest.NewRequest("POST", "/auth/sign_in", strings.NewReader(url.Values{"csrf": {b.cookies["csrf"].Value}}.Encode()))
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	r.Header.Set("Origin", "https://untrusted.example")
 	r.AddCookie(b.cookies["csrf"])
 	w = httptest.NewRecorder()
-	a.Handler().ServeHTTP(w, r)
+	b.handler.ServeHTTP(w, r)
 	assert.Equal(t, 403, w.Code)
 }

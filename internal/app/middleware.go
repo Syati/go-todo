@@ -1,8 +1,6 @@
 package app
 
 import (
-	"context"
-	"crypto/subtle"
 	"database/sql"
 	"errors"
 	"net/http"
@@ -10,73 +8,81 @@ import (
 	"go-todo/internal/i18n"
 
 	"github.com/labstack/echo/v5"
+	"github.com/labstack/echo/v5/middleware"
+	"log/slog"
 )
 
-type adminContextKey struct{}
-type localizerContextKey struct{}
+const (
+	adminContextKey     = "admin"
+	localizerContextKey = "localizer"
+)
 
-func (a *App) localizer(r *http.Request) i18n.Localizer {
-	if localizer, ok := r.Context().Value(localizerContextKey{}).(i18n.Localizer); ok {
+func (a *App) localizer(c *echo.Context) i18n.Localizer {
+	if localizer, ok := c.Get(localizerContextKey).(i18n.Localizer); ok {
 		return localizer
 	}
-	return a.translations.For(r.Header.Get("Accept-Language"))
+	return a.translations.For(c.Request().Header.Get("Accept-Language"))
 }
 
 func (a *App) localize(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		localizer := a.translations.For(c.Request().Header.Get("Accept-Language"))
 		c.Response().Header().Set("Content-Language", localizer.Language())
-		r := c.Request().WithContext(context.WithValue(c.Request().Context(), localizerContextKey{}, localizer))
-		c.SetRequest(r)
+		c.Response().Header().Set("Cache-Control", "no-store")
+		c.Response().Header().Add("Vary", "Accept-Language")
+		c.Set(localizerContextKey, localizer)
 		return next(c)
 	}
 }
 
-func (a *App) securityHeaders(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c *echo.Context) error {
-		header := c.Response().Header()
-		header.Set("X-Content-Type-Options", "nosniff")
-		header.Set("X-Frame-Options", "DENY")
-		header.Set("Referrer-Policy", "same-origin")
-		header.Set("Content-Security-Policy", "default-src 'self'; style-src 'self'; script-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'")
-		header.Set("Cache-Control", "no-store")
-		header.Add("Vary", "Accept-Language")
-
-		r := c.Request()
-		r.Body = http.MaxBytesReader(c.Response(), r.Body, 64<<10)
-		c.SetRequest(r)
-		if r.Method != http.MethodGet && r.Method != http.MethodHead {
-			cookie, err := r.Cookie("csrf")
-			if err != nil || r.ParseForm() != nil || len(cookie.Value) != 64 || subtle.ConstantTimeCompare([]byte(cookie.Value), []byte(r.PostForm.Get("csrf"))) != 1 {
-				return c.String(http.StatusForbidden, a.message(r, "error.csrf"))
-			}
-		}
-		return next(c)
+func (a *App) handleHTTPError(c *echo.Context, err error) {
+	response, unwrapErr := echo.UnwrapResponse(c.Response())
+	if unwrapErr == nil && response.Committed {
+		return
 	}
+	status := http.StatusInternalServerError
+	message := a.message(c, "error.internal")
+	var httpErr *echo.HTTPError
+	if errors.As(err, &httpErr) {
+		status = httpErr.Code
+		switch {
+		case errors.Is(err, middleware.ErrCSRFInvalid), errors.Is(err, echo.ErrBadRequest):
+			message = a.message(c, "error.csrf")
+		case httpErr.Message == "error.permission", httpErr.Message == "error.self_delete":
+			message = a.message(c, httpErr.Message)
+		case status == http.StatusNotFound:
+			message = http.StatusText(status)
+		case status == http.StatusRequestEntityTooLarge:
+			message = a.message(c, "error.invalid_input")
+		case status < http.StatusInternalServerError:
+			message = httpErr.Message
+		}
+	}
+	if status >= http.StatusInternalServerError {
+		slog.Error("request failed", "error", err)
+	}
+	_ = c.String(status, message)
 }
 
 func (a *App) requireAdmin(super bool) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c *echo.Context) error {
-			r := c.Request()
-			cookie, err := r.Cookie("session")
+			cookie, err := c.Cookie("session")
 			if err != nil {
 				return c.Redirect(http.StatusSeeOther, "/auth/sign_in")
 			}
-			row, err := a.queries.FindSessionAdmin(r.Context(), tokenHash(cookie.Value))
+			row, err := a.queries.FindSessionAdmin(c.Request().Context(), tokenHash(cookie.Value))
 			if errors.Is(err, sql.ErrNoRows) {
 				return c.Redirect(http.StatusSeeOther, "/auth/sign_in")
 			}
 			if err != nil {
-				a.fail(c.Response(), r, err)
-				return nil
+				return err
 			}
 			admin := adminModel(row)
 			if super && admin.Role != "super_admin" {
-				return c.String(http.StatusForbidden, a.message(r, "error.permission"))
+				return echo.NewHTTPError(http.StatusForbidden, "error.permission")
 			}
-			r = r.WithContext(context.WithValue(r.Context(), adminContextKey{}, &admin))
-			c.SetRequest(r)
+			c.Set(adminContextKey, &admin)
 			return next(c)
 		}
 	}
