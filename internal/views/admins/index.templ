@@ -1,0 +1,59 @@
+package admins
+
+import "strconv"
+import "go-todo/internal/domain"
+import "go-todo/internal/views"
+import "go-todo/internal/views/components"
+
+type IndexData struct {
+	Admins []domain.Admin
+	components.Pagination
+}
+
+func Path(id int64) string {
+	if id == 0 {
+		return "/console/admins"
+	}
+	return "/console/admins/" + strconv.FormatInt(id, 10)
+}
+
+templ Index(page views.Page, data IndexData) {
+	@views.Console(page, components.AdminsSection) {
+		<section class="card">
+			<div class="toolbar">
+				<form method="get" class="filters">
+					<input name="q" value={ data.Query } placeholder="メールアドレスで検索" aria-label="メールアドレス"/>
+					<select name="sort" aria-label="並び順">
+						<option value="desc">新しい順</option>
+						<option value="asc" selected={ data.Sort == "asc" }>古い順</option>
+					</select>
+					<button class="button secondary">検索</button>
+				</form>
+				if page.Admin.Role == "super_admin" {
+					<a class="button" href="/console/admins/new">＋ 管理者登録</a>
+				}
+			</div>
+			<div class="table-scroll">
+				<table>
+					<thead>
+						<tr><th>ID</th><th>メールアドレス</th><th>権限</th><th></th></tr>
+					</thead>
+					<tbody>
+						for _, admin := range data.Admins {
+							<tr>
+								<td class="muted">#{ strconv.FormatInt(admin.ID, 10) }</td>
+								<td><a class="item-name" href={ templ.SafeURL(Path(admin.ID)) }>{ admin.Email }</a></td>
+								<td>@components.RoleBadge(admin.Role)</td>
+								<td><a href={ templ.SafeURL(Path(admin.ID)) }>詳細 →</a></td>
+							</tr>
+						}
+						if len(data.Admins) == 0 {
+							<tr><td colspan="4" class="empty">該当する管理者がいません。</td></tr>
+						}
+					</tbody>
+				</table>
+			</div>
+			@components.Pager(data.Pagination)
+		</section>
+	}
+}

@@ -1,0 +1,30 @@
+package components
+
+import "net/url"
+import "strconv"
+
+type Pagination struct {
+	Page, Previous, Next int
+	Query, Status, Sort  string
+}
+
+func (p Pagination) URL(number int) string {
+	return "?" + url.Values{
+		"page":   {strconv.Itoa(number)},
+		"q":      {p.Query},
+		"status": {p.Status},
+		"sort":   {p.Sort},
+	}.Encode()
+}
+
+templ Pager(p Pagination) {
+	<div class="pagination">
+		if p.Previous > 0 {
+			<a href={ templ.SafeURL(p.URL(p.Previous)) }>← 前へ</a>
+		}
+		<span>{ strconv.Itoa(p.Page) } ページ</span>
+		if p.Next > 0 {
+			<a href={ templ.SafeURL(p.URL(p.Next)) }>次へ →</a>
+		}
+	</div>
+}

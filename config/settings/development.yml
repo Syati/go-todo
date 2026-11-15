@@ -1,0 +1,3 @@
+addr: "127.0.0.1:8080"
+cookie_secure: false
+database_url: "postgres://go_todo:local-development-only@127.0.0.1:5433/go_todo?sslmode=disable"

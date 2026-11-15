@@ -1,0 +1,32 @@
+package admins
+
+import "go-todo/internal/domain"
+import "go-todo/internal/views"
+import "go-todo/internal/views/components"
+
+templ Show(page views.Page, target domain.Admin) {
+	@views.Console(page, components.AdminsSection) {
+		<a href="/console/admins">← 管理者一覧</a>
+		<section class="card detail">
+			<div class="detail-row">
+				<span class="muted">メールアドレス</span>
+				<strong>{ target.Email }</strong>
+			</div>
+			<div class="detail-row">
+				<span class="muted">権限</span>
+				@components.RoleBadge(target.Role)
+			</div>
+			if page.Admin.Role == "super_admin" {
+				<div class="actions">
+					<a class="button" href={ templ.SafeURL(Path(target.ID) + "/edit") }>編集</a>
+					if page.Admin.ID != target.ID {
+						<form method="post" action={ templ.SafeURL(Path(target.ID) + "/delete") } data-confirm="この管理者を削除しますか？">
+							@components.CSRF(page.CSRF)
+							<button class="text-button danger">削除</button>
+						</form>
+					}
+				</div>
+			}
+		</section>
+	}
+}

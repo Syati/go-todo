@@ -1,0 +1,27 @@
+package auth
+
+import "go-todo/internal/views"
+import "go-todo/internal/views/components"
+
+templ Login(page views.Page, errorMessage string) {
+	@views.Auth(page) {
+		@components.Alert(errorMessage)
+		<section class="card auth-card">
+			<p class="eyebrow">WELCOME BACK</p>
+			<h1>ログイン</h1>
+			<p class="muted">管理ワークスペースにアクセスします。</p>
+			<form method="post" action="/auth/sign_in" class="stack">
+				@components.CSRF(page.CSRF)
+				<label>
+					メールアドレス
+					<input type="email" name="email" autocomplete="username" required autofocus/>
+				</label>
+				<label>
+					パスワード
+					<input type="password" name="password" autocomplete="current-password" required maxlength="72"/>
+				</label>
+				<button class="button">ログイン</button>
+			</form>
+		</section>
+	}
+}

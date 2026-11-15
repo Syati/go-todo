@@ -1,0 +1,36 @@
+package components
+
+templ CSRF(token string) {
+	<input type="hidden" name="csrf" value={ token }/>
+}
+
+templ Alert(message string) {
+	if message != "" {
+		<div class="alert" role="alert">{ message }</div>
+	}
+}
+
+templ StatusBadge(status string) {
+	<span class={ "badge", status }>{ statusLabel(status) }</span>
+}
+
+func statusLabel(status string) string {
+	switch status {
+	case "draft":
+		return "下書き"
+	case "on_sale":
+		return "販売中"
+	case "discontinued":
+		return "販売終了"
+	default:
+		return status
+	}
+}
+
+templ RoleBadge(role string) {
+	if role == "super_admin" {
+		<span class="badge on_sale">特権管理者</span>
+	} else {
+		<span class="badge">オペレーター</span>
+	}
+}

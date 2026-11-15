@@ -1,0 +1,64 @@
+package products
+
+import "strconv"
+import "go-todo/internal/domain"
+import "go-todo/internal/views"
+import "go-todo/internal/views/components"
+
+type IndexData struct {
+	Products []domain.Product
+	components.Pagination
+}
+
+func Path(id int64) string {
+	if id == 0 {
+		return "/console/products"
+	}
+	return "/console/products/" + strconv.FormatInt(id, 10)
+}
+
+templ Index(page views.Page, data IndexData) {
+	@views.Console(page, components.ProductsSection) {
+		<section class="card">
+			<div class="toolbar">
+				<form method="get" class="filters">
+					<input aria-label="商品名" name="q" value={ data.Query } placeholder="商品名で検索"/>
+					<select name="status" aria-label="ステータス">
+						<option value="">すべてのステータス</option>
+						<option value="draft" selected={ data.Status == "draft" }>下書き</option>
+						<option value="on_sale" selected={ data.Status == "on_sale" }>販売中</option>
+						<option value="discontinued" selected={ data.Status == "discontinued" }>販売終了</option>
+					</select>
+					<select name="sort" aria-label="並び順">
+						<option value="desc">新しい順</option>
+						<option value="asc" selected={ data.Sort == "asc" }>古い順</option>
+					</select>
+					<button class="button secondary">検索</button>
+				</form>
+				<a class="button" href="/console/products/new">＋ 商品登録</a>
+			</div>
+			<div class="table-scroll">
+				<table>
+					<thead>
+						<tr><th>ID</th><th>商品名</th><th>ステータス</th><th>税率</th><th></th></tr>
+					</thead>
+					<tbody>
+						for _, product := range data.Products {
+							<tr>
+								<td class="muted">#{ strconv.FormatInt(product.ID, 10) }</td>
+								<td><a class="item-name" href={ templ.SafeURL(Path(product.ID)) }>{ product.Name }</a></td>
+								<td>@components.StatusBadge(product.Status)</td>
+								<td>{ strconv.Itoa(product.TaxRate) }%</td>
+								<td><a href={ templ.SafeURL(Path(product.ID) + "/edit") }>編集 →</a></td>
+							</tr>
+						}
+						if len(data.Products) == 0 {
+							<tr><td colspan="5" class="empty">商品がありません。商品を登録するか、検索条件を変更してください。</td></tr>
+						}
+					</tbody>
+				</table>
+			</div>
+			@components.Pager(data.Pagination)
+		</section>
+	}
+}

@@ -1,0 +1,71 @@
+package products
+
+import "strconv"
+import "go-todo/internal/domain"
+import "go-todo/internal/views"
+import "go-todo/internal/views/components"
+
+templ Show(page views.Page, product domain.Product, skus []domain.SKU) {
+	@views.Console(page, components.ProductsSection) {
+		<div class="detail-heading">
+			<a href="/console/products">← 商品一覧</a>
+			<a class="button" href={ templ.SafeURL(Path(product.ID) + "/edit") }>商品を編集</a>
+		</div>
+		<section class="card detail">
+			<div class="detail-row">
+				<span class="muted">ステータス</span>
+				@components.StatusBadge(product.Status)
+			</div>
+			<div class="detail-row">
+				<span class="muted">税率</span>
+				<span>{ strconv.Itoa(product.TaxRate) }%</span>
+			</div>
+			<div class="detail-row">
+				<span class="muted">説明</span>
+				<p class="description">{ product.Description }</p>
+			</div>
+		</section>
+		<section class="card">
+			<div class="toolbar">
+				<h2>SKU・在庫</h2>
+				<a class="button" href={ templ.SafeURL(Path(product.ID) + "/skus/new") }>＋ SKU登録</a>
+			</div>
+			<div class="table-scroll">
+				<table>
+					<thead>
+						<tr><th>コード</th><th>サイズ</th><th>カラー</th><th>価格（円）</th><th>在庫</th><th></th></tr>
+					</thead>
+					<tbody>
+						for _, sku := range skus {
+							@skuRow(sku, page.CSRF)
+						}
+						if len(skus) == 0 {
+							<tr><td colspan="6" class="empty">SKUはまだ登録されていません。</td></tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		</section>
+		<form method="post" action={ templ.SafeURL(Path(product.ID) + "/delete") } class="delete-form" data-confirm="商品とすべてのSKUを削除しますか？">
+			@components.CSRF(page.CSRF)
+			<button class="text-button danger">この商品を削除</button>
+		</form>
+	}
+}
+
+templ skuRow(sku domain.SKU, csrf string) {
+	<tr>
+		<td class="item-name">{ sku.Code }</td>
+		<td>{ sku.Size }</td>
+		<td>{ sku.Color }</td>
+		<td>{ strconv.FormatInt(sku.PriceYen, 10) }</td>
+		<td>{ strconv.FormatInt(sku.StockQuantity, 10) }</td>
+		<td class="row-actions">
+			<a href={ templ.SafeURL(Path(sku.ProductID) + "/skus/" + strconv.FormatInt(sku.ID, 10) + "/edit") }>編集</a>
+			<form method="post" action={ templ.SafeURL(Path(sku.ProductID) + "/skus/" + strconv.FormatInt(sku.ID, 10) + "/delete") } data-confirm="このSKUを削除しますか？">
+				@components.CSRF(csrf)
+				<button class="text-button danger">削除</button>
+			</form>
+		</td>
+	</tr>
+}

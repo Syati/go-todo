@@ -1,0 +1,36 @@
+package components
+
+type Section string
+
+const (
+	DashboardSection Section = "dashboard"
+	ProductsSection  Section = "products"
+	AdminsSection    Section = "admins"
+)
+
+templ Sidebar(section Section) {
+	<aside id="sidebar" aria-label="メインメニュー">
+		<a class="brand" href="/"><span class="brand-icon">G</span> Go Todo</a>
+		<p class="nav-label">WORKSPACE</p>
+		<nav>
+			@navLink("/", "◈", "Dashboard", section == DashboardSection)
+			@navLink("/console/products", "▦", "商品一覧", section == ProductsSection)
+			@navLink("/console/admins", "♙", "管理者一覧", section == AdminsSection)
+		</nav>
+		<div class="sidebar-bottom">
+			<a href="/faq">ヘルプ・FAQ ↗</a>
+			<small>Go / PostgreSQL</small>
+		</div>
+	</aside>
+}
+
+templ navLink(href, icon, label string, active bool) {
+	<a
+		href={ templ.SafeURL(href) }
+		if active {
+			aria-current="page"
+		}
+	>
+		{ icon } <span>{ label }</span>
+	</a>
+}

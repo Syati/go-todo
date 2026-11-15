@@ -1,0 +1,54 @@
+package views
+
+import "go-todo/internal/domain"
+import "go-todo/internal/views/components"
+
+type Page struct {
+	Title string
+	Admin domain.Admin
+	CSRF  string
+}
+
+templ Document(title string) {
+	<!DOCTYPE html>
+	<html lang="ja">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ title } · Go Todo</title>
+			<link rel="stylesheet" href="/static/app.css"/>
+			<script src="/static/app.js" defer></script>
+		</head>
+		<body>
+			{ children... }
+		</body>
+	</html>
+}
+
+templ Console(page Page, section components.Section) {
+	@Document(page.Title) {
+		@components.Sidebar(section)
+		<div class="workspace">
+			@components.Header(page.Admin.Email, page.CSRF)
+			<main>
+				<div class="page-heading">
+					<div>
+						<p class="eyebrow">GO TODO / CONSOLE</p>
+						<h1>{ page.Title }</h1>
+					</div>
+				</div>
+				{ children... }
+			</main>
+			<footer>Go Todo <span>管理ワークスペース</span></footer>
+		</div>
+	}
+}
+
+templ Auth(page Page) {
+	@Document(page.Title) {
+		<main class="auth">
+			<a class="brand" href="/auth/sign_in"><span class="brand-icon">G</span> Go Todo</a>
+			{ children... }
+		</main>
+	}
+}

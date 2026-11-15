@@ -1,0 +1,55 @@
+package skus
+
+import "strconv"
+import "go-todo/internal/domain"
+import "go-todo/internal/views"
+import "go-todo/internal/views/components"
+
+func productPath(id int64) string { return "/console/products/" + strconv.FormatInt(id, 10) }
+
+func formAction(sku domain.SKU) string {
+	base := productPath(sku.ProductID) + "/skus"
+	if sku.ID == 0 {
+		return base
+	}
+	return base + "/" + strconv.FormatInt(sku.ID, 10)
+}
+
+templ Form(page views.Page, product domain.Product, sku domain.SKU, errorMessage string) {
+	@views.Console(page, components.ProductsSection) {
+		@components.Alert(errorMessage)
+		<p class="intro">{ product.Name }</p>
+		<section class="card form-card">
+			<form method="post" action={ templ.SafeURL(formAction(sku)) } class="stack">
+				@components.CSRF(page.CSRF)
+				<label>
+					SKUコード <span class="required">必須</span>
+					<input name="code" value={ sku.Code } maxlength="50" required/>
+					<small>英数字とハイフン。保存時に大文字に統一します。</small>
+				</label>
+				<div class="form-grid">
+					<label>
+						サイズ
+						<input name="size" value={ sku.Size } maxlength="30"/>
+					</label>
+					<label>
+						カラー
+						<input name="color" value={ sku.Color } maxlength="30"/>
+					</label>
+					<label>
+						価格（円）
+						<input type="number" name="price_yen" value={ strconv.FormatInt(sku.PriceYen, 10) } min="0" max="10000000" required/>
+					</label>
+					<label>
+						在庫数
+						<input type="number" name="stock_quantity" value={ strconv.FormatInt(sku.StockQuantity, 10) } min="0" required/>
+					</label>
+				</div>
+				<div class="actions">
+					<button class="button">保存する</button>
+					<a class="button secondary" href={ templ.SafeURL(productPath(product.ID)) }>キャンセル</a>
+				</div>
+			</form>
+		</section>
+	}
+}

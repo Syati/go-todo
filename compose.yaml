@@ -1,0 +1,18 @@
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: go_todo
+      POSTGRES_USER: go_todo
+      POSTGRES_PASSWORD: local-development-only
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U go_todo -d go_todo"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+volumes:
+  postgres_data:

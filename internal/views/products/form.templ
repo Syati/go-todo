@@ -1,0 +1,45 @@
+package products
+
+import "go-todo/internal/domain"
+import "go-todo/internal/views"
+import "go-todo/internal/views/components"
+
+templ Form(page views.Page, product domain.Product, errorMessage string) {
+	@views.Console(page, components.ProductsSection) {
+		@components.Alert(errorMessage)
+		<section class="card form-card">
+			<form method="post" action={ templ.SafeURL(Path(product.ID)) } class="stack">
+				@components.CSRF(page.CSRF)
+				<label>
+					商品名 <span class="required">必須</span>
+					<input name="name" value={ product.Name } maxlength="100" required/>
+				</label>
+				<label>
+					説明
+					<textarea name="description" rows="5" maxlength="2000">{ product.Description }</textarea>
+				</label>
+				<div class="form-grid">
+					<label>
+						ステータス
+						<select name="status">
+							<option value="draft" selected={ product.Status == "draft" }>下書き</option>
+							<option value="on_sale" selected={ product.Status == "on_sale" }>販売中</option>
+							<option value="discontinued" selected={ product.Status == "discontinued" }>販売終了</option>
+						</select>
+					</label>
+					<label>
+						税率
+						<select name="tax_rate">
+							<option value="10" selected={ product.TaxRate == 10 }>標準税率 10%</option>
+							<option value="8" selected={ product.TaxRate == 8 }>軽減税率 8%</option>
+						</select>
+					</label>
+				</div>
+				<div class="actions">
+					<button class="button">保存する</button>
+					<a class="button secondary" href={ templ.SafeURL(Path(product.ID)) }>キャンセル</a>
+				</div>
+			</form>
+		</section>
+	}
+}

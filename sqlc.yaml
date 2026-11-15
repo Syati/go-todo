@@ -1,0 +1,14 @@
+version: "2"
+sql:
+  - engine: postgresql
+    schema: db/migrations
+    queries: db/queries
+    gen:
+      go:
+        package: store
+        out: internal/store
+        sql_package: database/sql
+        emit_empty_slices: true
+        overrides:
+          - db_type: pg_catalog.int4
+            go_type: int
