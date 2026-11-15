@@ -6,31 +6,31 @@ import "go-todo/internal/views/components"
 
 templ Index(page views.Page, productCount int64) {
 	@views.Console(page, components.DashboardSection) {
-		<p class="mb-6 text-sm text-gray-600">商品とチームを、ひとつのワークスペースで。</p>
+		<p class="mb-6 text-sm text-gray-600">{ page.Text("dashboard.intro") }</p>
 		<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 			<a class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition hover:bg-gray-50" href="/console/products">
-				<p class="text-sm font-medium text-gray-500">登録商品</p>
+				<p class="text-sm font-medium text-gray-500">{ page.Text("dashboard.catalog") }</p>
 				<strong class="my-2 block text-3xl font-bold text-gray-900">{ strconv.FormatInt(productCount, 10) }</strong>
-				<p class="text-sm font-medium text-blue-700">商品一覧を見る <span aria-hidden="true">→</span></p>
+				<p class="text-sm font-medium text-blue-700">{ page.Text("dashboard.open_products") } <span aria-hidden="true">→</span></p>
 			</a>
 			<a class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition hover:bg-gray-50" href="/console/products/new">
 				<span class="mb-4 grid size-10 place-items-center rounded-lg bg-blue-100 text-xl font-semibold text-blue-700">＋</span>
-				<h2 class="mb-2 text-lg font-semibold text-gray-900">商品を登録</h2>
-				<p class="mb-4 text-sm text-gray-600">商品情報を作成し、SKU・価格・在庫を管理します。</p>
-				<span class="text-sm font-medium text-blue-700">新規登録 <span aria-hidden="true">→</span></span>
+				<h2 class="mb-2 text-lg font-semibold text-gray-900">{ page.Text("dashboard.add_product") }</h2>
+				<p class="mb-4 text-sm text-gray-600">{ page.Text("dashboard.add_product_description") }</p>
+				<span class="text-sm font-medium text-blue-700">{ page.Text("dashboard.new_product") } <span aria-hidden="true">→</span></span>
 			</a>
 			<a class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition hover:bg-gray-50" href="/console/admins">
 				<span class="mb-4 grid size-10 place-items-center rounded-lg bg-purple-100 text-xl text-purple-700">♙</span>
-				<h2 class="mb-2 text-lg font-semibold text-gray-900">管理者を確認</h2>
-				<p class="mb-4 text-sm text-gray-600">ワークスペースのメンバーと権限を確認します。</p>
-				<span class="text-sm font-medium text-blue-700">管理者一覧 <span aria-hidden="true">→</span></span>
+				<h2 class="mb-2 text-lg font-semibold text-gray-900">{ page.Text("dashboard.admins") }</h2>
+				<p class="mb-4 text-sm text-gray-600">{ page.Text("dashboard.admins_description") }</p>
+				<span class="text-sm font-medium text-blue-700">{ page.Text("dashboard.admins_link") } <span aria-hidden="true">→</span></span>
 			</a>
 		</div>
 		<section class="mt-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
 			<p class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">Get started</p>
-			<h2 class="mb-2 text-xl font-semibold text-gray-900">商品管理をはじめましょう</h2>
-			<p class="mb-5 text-sm text-gray-600">商品ごとに、サイズ・カラーの組み合わせをSKUとして登録できます。</p>
-			<a class="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-100" href="/console/products">商品一覧を開く</a>
+			<h2 class="mb-2 text-xl font-semibold text-gray-900">{ page.Text("dashboard.get_started") }</h2>
+			<p class="mb-5 text-sm text-gray-600">{ page.Text("dashboard.get_started_description") }</p>
+			<a class="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-100" href="/console/products">{ page.Text("dashboard.open_list") }</a>
 		</section>
 	}
 }

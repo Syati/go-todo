@@ -7,20 +7,20 @@ templ Login(page views.Page, errorMessage string) {
 	@views.Auth(page) {
 		@components.Alert(errorMessage)
 		<section class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
-			<p class="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-500">Welcome back</p>
-			<h1 class="mb-2 text-2xl font-bold tracking-tight text-gray-900">ログイン</h1>
-			<p class="mb-6 text-sm text-gray-600">管理ワークスペースにアクセスします。</p>
+			<p class="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-500">{ page.Text("auth.welcome") }</p>
+			<h1 class="mb-2 text-2xl font-bold tracking-tight text-gray-900">{ page.Text("auth.login") }</h1>
+			<p class="mb-6 text-sm text-gray-600">{ page.Text("auth.description") }</p>
 			<form method="post" action="/auth/sign_in" class="space-y-5">
 				@components.CSRF(page.CSRF)
 				<label class="block text-sm font-medium text-gray-900">
-					メールアドレス
+					{ page.Text("field.email") }
 					<input class="mt-2 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500" type="email" name="email" autocomplete="username" required autofocus/>
 				</label>
 				<label class="block text-sm font-medium text-gray-900">
-					パスワード
+					{ page.Text("field.password") }
 					<input class="mt-2 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500" type="password" name="password" autocomplete="current-password" required maxlength="72"/>
 				</label>
-				<button class="w-full rounded-lg bg-blue-700 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">ログイン</button>
+				<button class="w-full rounded-lg bg-blue-700 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">{ page.Text("auth.login") }</button>
 			</form>
 		</section>
 	}

@@ -13,33 +13,20 @@ templ Alert(message string) {
 	}
 }
 
-templ StatusBadge(status string) {
+templ StatusBadge(status string, t func(string) string) {
 	if status == "on_sale" {
-		<span class="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">{ statusLabel(status) }</span>
+		<span class="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">{ t("status.on_sale") }</span>
 	} else if status == "discontinued" {
-		<span class="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">{ statusLabel(status) }</span>
+		<span class="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">{ t("status.discontinued") }</span>
 	} else {
-		<span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">{ statusLabel(status) }</span>
+		<span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">{ t("status.draft") }</span>
 	}
 }
 
-func statusLabel(status string) string {
-	switch status {
-	case "draft":
-		return "下書き"
-	case "on_sale":
-		return "販売中"
-	case "discontinued":
-		return "販売終了"
-	default:
-		return status
-	}
-}
-
-templ RoleBadge(role string) {
+templ RoleBadge(role string, t func(string) string) {
 	if role == "super_admin" {
-		<span class="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">特権管理者</span>
+		<span class="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">{ t("role.super_admin") }</span>
 	} else {
-		<span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">オペレーター</span>
+		<span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">{ t("role.operator") }</span>
 	}
 }

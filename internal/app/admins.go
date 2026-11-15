@@ -19,7 +19,7 @@ func (a *App) admins(w http.ResponseWriter, r *http.Request) {
 	p := adminviews.IndexData{Pagination: components.Pagination{Query: r.URL.Query().Get("q"), Page: n, Sort: r.URL.Query().Get("sort")}}
 	rows, err := a.queries.ListAdmins(r.Context(), store.ListAdminsParams{Search: p.Query, Ascending: p.Sort == "asc", PageOffset: offset})
 	if err != nil {
-		a.fail(w, err)
+		a.fail(w, r, err)
 		return
 	}
 	for _, row := range rows {
@@ -32,7 +32,7 @@ func (a *App) admins(w http.ResponseWriter, r *http.Request) {
 	if n > 1 {
 		p.Previous = n - 1
 	}
-	a.render(w, r, adminviews.Index(a.viewData(w, r, "管理者一覧"), p), 200)
+	a.render(w, r, adminviews.Index(a.viewData(w, r, "title.admins"), p), 200)
 }
 func (a *App) findAdmin(w http.ResponseWriter, r *http.Request) (Admin, bool) {
 	n, err := id(r)
@@ -47,7 +47,7 @@ func (a *App) findAdmin(w http.ResponseWriter, r *http.Request) (Admin, bool) {
 		return admin, false
 	}
 	if err != nil {
-		a.fail(w, err)
+		a.fail(w, r, err)
 		return admin, false
 	}
 	return admin, true
@@ -57,7 +57,7 @@ func (a *App) adminShow(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	a.render(w, r, adminviews.Show(a.viewData(w, r, "管理者詳細"), target), 200)
+	a.render(w, r, adminviews.Show(a.viewData(w, r, "title.admin_detail"), target), 200)
 }
 func (a *App) adminForm(w http.ResponseWriter, r *http.Request) {
 	target := Admin{Role: "operator"}
@@ -68,7 +68,7 @@ func (a *App) adminForm(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	a.render(w, r, adminviews.Form(a.viewData(w, r, "管理者入力"), target, ""), 200)
+	a.render(w, r, adminviews.Form(a.viewData(w, r, "title.admin_form"), target, ""), 200)
 }
 func (a *App) saveAdmin(w http.ResponseWriter, r *http.Request) {
 	target := Admin{Role: "operator"}
@@ -108,7 +108,7 @@ func (a *App) saveAdmin(w http.ResponseWriter, r *http.Request) {
 				// Revoke existing sessions when credentials or permissions change.
 				tx, txErr := a.db.BeginTx(r.Context(), nil)
 				if txErr != nil {
-					a.fail(w, txErr)
+					a.fail(w, r, txErr)
 					return
 				}
 				defer func() { _ = tx.Rollback() }() // Commit 後の ErrTxDone は無視する。
@@ -127,13 +127,13 @@ func (a *App) saveAdmin(w http.ResponseWriter, r *http.Request) {
 			if errors.As(err, &pgErr) && pgErr.SQLState() == "23505" {
 				err = errors.New(dbMessage(err))
 			} else {
-				a.fail(w, err)
+				a.fail(w, r, err)
 				return
 			}
 		}
 	}
 	if err != nil {
-		a.render(w, r, adminviews.Form(a.viewData(w, r, "管理者入力"), target, err.Error()), 422)
+		a.render(w, r, adminviews.Form(a.viewData(w, r, "title.admin_form"), target, a.inputError(r, err)), 422)
 		return
 	}
 	redirect(w, r, fmt.Sprintf("/console/admins/%d", target.ID))
@@ -145,11 +145,11 @@ func (a *App) deleteAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 	current := r.Context().Value(adminContextKey{}).(*Admin)
 	if target.ID == current.ID {
-		http.Error(w, "自分自身は削除できません。", http.StatusUnprocessableEntity)
+		http.Error(w, a.message(r, "error.self_delete"), http.StatusUnprocessableEntity)
 		return
 	}
 	if err := a.queries.DiscardAdmin(r.Context(), target.ID); err != nil {
-		a.fail(w, err)
+		a.fail(w, r, err)
 		return
 	}
 	redirect(w, r, "/console/admins")

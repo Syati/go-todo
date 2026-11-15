@@ -4,12 +4,10 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/subtle"
 	"database/sql"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/fs"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -17,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"go-todo/assets"
+	"go-todo/internal/i18n"
 	"go-todo/internal/store"
 	"go-todo/internal/views"
 	authviews "go-todo/internal/views/auth"
@@ -31,12 +29,13 @@ import (
 )
 
 type App struct {
-	db        *sql.DB
-	queries   *store.Queries
-	secure    bool
-	mu        sync.Mutex
-	attempts  map[string]attempt
-	dummyHash []byte
+	db           *sql.DB
+	queries      *store.Queries
+	secure       bool
+	mu           sync.Mutex
+	attempts     map[string]attempt
+	dummyHash    []byte
+	translations *i18n.Bundle
 }
 type attempt struct {
 	Count int
@@ -63,7 +62,11 @@ func Open(ctx context.Context, url string, secure bool) (*App, error) {
 	if err != nil {
 		return nil, errors.Join(err, db.Close())
 	}
-	return &App{db: db, queries: store.New(db), secure: secure, attempts: map[string]attempt{}, dummyHash: dummy}, nil
+	translations, err := i18n.NewBundle()
+	if err != nil {
+		return nil, errors.Join(err, db.Close())
+	}
+	return &App{db: db, queries: store.New(db), secure: secure, attempts: map[string]attempt{}, dummyHash: dummy, translations: translations}, nil
 }
 
 func (a *App) Close() error { return a.db.Close() }
@@ -98,92 +101,12 @@ func (a *App) Bootstrap(ctx context.Context, email, password string) error {
 }
 
 func (a *App) Handler() http.Handler {
-	mux := http.NewServeMux()
-	static, _ := fs.Sub(assets.Files, "static")
-	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(static))))
-	mux.HandleFunc("GET /up", func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), time.Second)
-		defer cancel()
-		if err := a.db.PingContext(ctx); err != nil {
-			http.Error(w, "unavailable", http.StatusServiceUnavailable)
-			return
-		}
-		if _, err := w.Write([]byte("ok\n")); err != nil {
-			slog.Warn("health response write failed", "error", err)
-		}
-	})
-	mux.HandleFunc("GET /auth/sign_in", a.login)
-	mux.HandleFunc("POST /auth/sign_in", a.login)
-	mux.HandleFunc("POST /auth/sign_out", a.authorized(a.logout, false))
-	mux.HandleFunc("GET /{$}", a.authorized(a.dashboard, false))
-	mux.HandleFunc("GET /faq", a.authorized(a.faq, false))
-	mux.HandleFunc("GET /console/products", a.authorized(a.products, false))
-	mux.HandleFunc("GET /console/products/new", a.authorized(a.productForm, false))
-	mux.HandleFunc("POST /console/products", a.authorized(a.saveProduct, false))
-	mux.HandleFunc("GET /console/products/{id}", a.authorized(a.productShow, false))
-	mux.HandleFunc("GET /console/products/{id}/edit", a.authorized(a.productForm, false))
-	mux.HandleFunc("POST /console/products/{id}", a.authorized(a.saveProduct, false))
-	mux.HandleFunc("POST /console/products/{id}/delete", a.authorized(a.deleteProduct, false))
-	mux.HandleFunc("GET /console/products/{id}/skus/new", a.authorized(a.skuForm, false))
-	mux.HandleFunc("POST /console/products/{id}/skus", a.authorized(a.saveSKU, false))
-	mux.HandleFunc("GET /console/products/{id}/skus/{sku}/edit", a.authorized(a.skuForm, false))
-	mux.HandleFunc("POST /console/products/{id}/skus/{sku}", a.authorized(a.saveSKU, false))
-	mux.HandleFunc("POST /console/products/{id}/skus/{sku}/delete", a.authorized(a.deleteSKU, false))
-	mux.HandleFunc("GET /console/admins", a.authorized(a.admins, false))
-	mux.HandleFunc("GET /console/admins/new", a.authorized(a.adminForm, true))
-	mux.HandleFunc("POST /console/admins", a.authorized(a.saveAdmin, true))
-	mux.HandleFunc("GET /console/admins/{id}", a.authorized(a.adminShow, false))
-	mux.HandleFunc("GET /console/admins/{id}/edit", a.authorized(a.adminForm, true))
-	mux.HandleFunc("POST /console/admins/{id}", a.authorized(a.saveAdmin, true))
-	mux.HandleFunc("POST /console/admins/{id}/delete", a.authorized(a.deleteAdmin, true))
-	protected := http.NewCrossOriginProtection().Handler(mux)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("X-Frame-Options", "DENY")
-		w.Header().Set("Referrer-Policy", "same-origin")
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self'; script-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'")
-		w.Header().Set("Cache-Control", "no-store")
-		r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
-		if r.Method != "GET" && r.Method != "HEAD" {
-			cookie, err := r.Cookie("csrf")
-			if err != nil || r.ParseForm() != nil || len(cookie.Value) != 64 || subtle.ConstantTimeCompare([]byte(cookie.Value), []byte(r.PostForm.Get("csrf"))) != 1 {
-				http.Error(w, "フォームの有効期限が切れました。画面を再読み込みしてください。", http.StatusForbidden)
-				return
-			}
-		}
-		protected.ServeHTTP(w, r)
-	})
-}
-
-type adminContextKey struct{}
-
-func (a *App) authorized(next http.HandlerFunc, super bool) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("session")
-		if err != nil {
-			http.Redirect(w, r, "/auth/sign_in", http.StatusSeeOther)
-			return
-		}
-		row, err := a.queries.FindSessionAdmin(r.Context(), tokenHash(cookie.Value))
-		if errors.Is(err, sql.ErrNoRows) {
-			http.Redirect(w, r, "/auth/sign_in", http.StatusSeeOther)
-			return
-		}
-		if err != nil {
-			a.fail(w, err)
-			return
-		}
-		admin := adminModel(row)
-		if super && admin.Role != "super_admin" {
-			http.Error(w, "この操作には特権管理者の権限が必要です。", http.StatusForbidden)
-			return
-		}
-		next(w, r.WithContext(context.WithValue(r.Context(), adminContextKey{}, &admin)))
-	}
+	return a.routes()
 }
 
 func (a *App) viewData(w http.ResponseWriter, r *http.Request, title string) views.Page {
-	p := views.Page{Title: title}
+	localizer := a.localizer(r)
+	p := views.Page{Title: localizer.Message(title), Locale: localizer.Language(), T: localizer.Message}
 	if admin, ok := r.Context().Value(adminContextKey{}).(*Admin); ok {
 		p.Admin = *admin
 	}
@@ -200,7 +123,7 @@ func (a *App) viewData(w http.ResponseWriter, r *http.Request, title string) vie
 func (a *App) render(w http.ResponseWriter, r *http.Request, component templ.Component, status int) {
 	var out strings.Builder
 	if err := component.Render(r.Context(), &out); err != nil {
-		a.fail(w, err)
+		a.fail(w, r, err)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -221,9 +144,34 @@ func randomToken() string {
 	return hex.EncodeToString(b)
 }
 func tokenHash(s string) string { hash := sha256.Sum256([]byte(s)); return hex.EncodeToString(hash[:]) }
-func (a *App) fail(w http.ResponseWriter, err error) {
+func (a *App) message(r *http.Request, id string) string {
+	return a.localizer(r).Message(id)
+}
+func (a *App) inputError(r *http.Request, err error) string {
+	keys := map[string]string{
+		"メールアドレスを正しく入力してください。":                     "error.email_invalid",
+		"パスワードは12〜72バイトで入力してください。":                 "error.password_length",
+		"権限が不正です。":                                 "error.role_invalid",
+		"確認用パスワードが一致しません。":                         "error.password_mismatch",
+		"商品名は1〜100文字で入力してください。":                    "error.product_name",
+		"説明は2000文字以内で入力してください。":                    "error.product_description",
+		"商品ステータスが不正です。":                            "error.product_status",
+		"税率は8%または10%を指定してください。":                    "error.product_tax",
+		"SKUコードは50文字以内の英数字・ハイフンで入力してください（先頭は英数字）。": "error.sku_code",
+		"サイズ・カラーは30文字以内で入力してください。":                 "error.sku_variant",
+		"価格は0〜10,000,000円、在庫は0以上の整数で入力してください。":     "error.sku_price_stock",
+		"価格と在庫は整数で入力してください。":                       "error.sku_integer",
+		"メールアドレス、SKUコード、またはサイズとカラーの組み合わせが重複しています。": "error.duplicate",
+	}
+	key, ok := keys[err.Error()]
+	if !ok {
+		key = "error.invalid_input"
+	}
+	return a.message(r, key)
+}
+func (a *App) fail(w http.ResponseWriter, r *http.Request, err error) {
 	slog.Error("request failed", "error", err)
-	http.Error(w, "処理に失敗しました。時間をおいてお試しください。", 500)
+	http.Error(w, a.message(r, "error.internal"), 500)
 }
 func id(r *http.Request) (int64, error) {
 	n, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
@@ -245,7 +193,7 @@ func dbMessage(err error) string {
 
 func (a *App) login(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" || r.Method == "HEAD" {
-		a.render(w, r, authviews.Login(a.viewData(w, r, "ログイン"), ""), 200)
+		a.render(w, r, authviews.Login(a.viewData(w, r, "title.login"), ""), 200)
 		return
 	}
 	email := strings.ToLower(strings.TrimSpace(r.PostForm.Get("email")))
@@ -260,7 +208,7 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 	item := a.attempts[email]
 	if item.Count >= 5 || (len(a.attempts) >= 10000 && item.Count == 0) {
 		a.mu.Unlock()
-		a.render(w, r, authviews.Login(a.viewData(w, r, "ログイン"), "ログイン試行が多すぎます。15分後にお試しください。"), 429)
+		a.render(w, r, authviews.Login(a.viewData(w, r, "title.login"), a.message(r, "error.login_throttled")), 429)
 		return
 	}
 	item.Count++
@@ -271,7 +219,7 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 	a.mu.Unlock()
 	admin, err := a.queries.FindLoginAdmin(r.Context(), email)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		a.fail(w, err)
+		a.fail(w, r, err)
 		return
 	}
 	compare := []byte(admin.PasswordHash)
@@ -280,13 +228,13 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 	}
 	passwordErr := bcrypt.CompareHashAndPassword(compare, []byte(r.PostForm.Get("password")))
 	if err != nil || passwordErr != nil {
-		a.render(w, r, authviews.Login(a.viewData(w, r, "ログイン"), "メールアドレスまたはパスワードが正しくありません。"), 422)
+		a.render(w, r, authviews.Login(a.viewData(w, r, "title.login"), a.message(r, "error.login_invalid")), 422)
 		return
 	}
 	token := randomToken()
 	tx, err := a.db.BeginTx(r.Context(), nil)
 	if err != nil {
-		a.fail(w, err)
+		a.fail(w, r, err)
 		return
 	}
 	defer func() { _ = tx.Rollback() }() // Commit 後の ErrTxDone は無視する。
@@ -299,7 +247,7 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 		err = tx.Commit()
 	}
 	if err != nil {
-		a.fail(w, err)
+		a.fail(w, r, err)
 		return
 	}
 	a.mu.Lock()
@@ -312,7 +260,7 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) {
 func (a *App) logout(w http.ResponseWriter, r *http.Request) {
 	cookie, _ := r.Cookie("session")
 	if err := a.queries.DeleteSession(r.Context(), tokenHash(cookie.Value)); err != nil {
-		a.fail(w, err)
+		a.fail(w, r, err)
 		return
 	}
 	a.cookie(w, "session", "", -1)
@@ -322,11 +270,11 @@ func (a *App) logout(w http.ResponseWriter, r *http.Request) {
 func (a *App) dashboard(w http.ResponseWriter, r *http.Request) {
 	count, err := a.queries.CountProducts(r.Context())
 	if err != nil {
-		a.fail(w, err)
+		a.fail(w, r, err)
 		return
 	}
-	a.render(w, r, dashboardviews.Index(a.viewData(w, r, "Dashboard"), count), 200)
+	a.render(w, r, dashboardviews.Index(a.viewData(w, r, "title.dashboard"), count), 200)
 }
 func (a *App) faq(w http.ResponseWriter, r *http.Request) {
-	a.render(w, r, faqviews.Index(a.viewData(w, r, "よくある質問")), 200)
+	a.render(w, r, faqviews.Index(a.viewData(w, r, "title.faq")), 200)
 }

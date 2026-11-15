@@ -6,20 +6,21 @@ const (
 	DashboardSection Section = "dashboard"
 	ProductsSection  Section = "products"
 	AdminsSection    Section = "admins"
+	FAQSection       Section = "faq"
 )
 
-templ Sidebar(section Section) {
-	<aside id="sidebar" aria-label="メインメニュー" class="fixed inset-y-0 left-0 z-40 w-64 -translate-x-full border-r border-gray-200 bg-white transition-transform lg:translate-x-0">
+templ Sidebar(section Section, t func(string) string) {
+	<aside id="sidebar" aria-label={ t("common.menu") } class="fixed inset-y-0 left-0 z-40 w-64 -translate-x-full border-r border-gray-200 bg-white transition-transform lg:translate-x-0">
 		<div class="flex h-full flex-col overflow-y-auto px-3 py-4">
 			<a class="mb-5 flex items-center gap-3 px-2.5 py-2.5 text-xl font-semibold text-gray-900" href="/">
 				<span class="grid size-9 place-items-center rounded-lg bg-blue-700 text-lg text-white">G</span> Go Todo
 			</a>
-			<p class="mb-2 px-2.5 text-xs font-semibold uppercase tracking-wider text-gray-500">ワークスペース</p>
+			<p class="mb-2 px-2.5 text-xs font-semibold uppercase tracking-wider text-gray-500">{ t("nav.workspace") }</p>
 			<nav class="flex-1 space-y-1 font-medium">
-			@navLink("/", "◈", "Dashboard", section == DashboardSection)
-			@navLink("/console/products", "▦", "商品一覧", section == ProductsSection)
-			@navLink("/console/admins", "♙", "管理者一覧", section == AdminsSection)
-			@navLink("/faq", "?", "ヘルプ・FAQ", section == "faq")
+				@navLink("/", "◈", "nav.dashboard", section == DashboardSection, t)
+				@navLink("/console/products", "▦", "nav.products", section == ProductsSection, t)
+				@navLink("/console/admins", "♙", "nav.admins", section == AdminsSection, t)
+				@navLink("/faq", "?", "nav.faq", section == FAQSection, t)
 			</nav>
 			<div class="mt-auto border-t border-gray-200 pt-4">
 				<p class="px-2.5 py-2 text-xs text-gray-500">Go / PostgreSQL</p>
@@ -28,7 +29,7 @@ templ Sidebar(section Section) {
 	</aside>
 }
 
-templ navLink(href, icon, label string, active bool) {
+templ navLink(href, icon, label string, active bool, t func(string) string) {
 	<a
 		href={ templ.SafeURL(href) }
 		class={ navLinkClass(active) }
@@ -36,7 +37,7 @@ templ navLink(href, icon, label string, active bool) {
 			aria-current="page"
 		}
 	>
-		<span class="w-6 text-center text-base">{ icon }</span><span>{ label }</span>
+		<span class="w-6 text-center text-base">{ icon }</span><span>{ t(label) }</span>
 	</a>
 }
 

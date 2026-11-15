@@ -27,7 +27,7 @@ func (a *App) products(w http.ResponseWriter, r *http.Request) {
 	p := productviews.IndexData{Pagination: components.Pagination{Query: r.URL.Query().Get("q"), Status: r.URL.Query().Get("status"), Sort: r.URL.Query().Get("sort"), Page: n}}
 	rows, err := a.queries.ListProducts(r.Context(), store.ListProductsParams{Search: p.Query, StatusFilter: p.Status, Ascending: p.Sort == "asc", PageOffset: offset})
 	if err != nil {
-		a.fail(w, err)
+		a.fail(w, r, err)
 		return
 	}
 	for _, row := range rows {
@@ -40,7 +40,7 @@ func (a *App) products(w http.ResponseWriter, r *http.Request) {
 	if n > 1 {
 		p.Previous = n - 1
 	}
-	a.render(w, r, productviews.Index(a.viewData(w, r, "商品一覧"), p), 200)
+	a.render(w, r, productviews.Index(a.viewData(w, r, "title.products"), p), 200)
 }
 
 func (a *App) findProduct(w http.ResponseWriter, r *http.Request) (Product, bool) {
@@ -56,7 +56,7 @@ func (a *App) findProduct(w http.ResponseWriter, r *http.Request) (Product, bool
 		return p, false
 	}
 	if err != nil {
-		a.fail(w, err)
+		a.fail(w, r, err)
 		return p, false
 	}
 	return p, true
@@ -70,7 +70,7 @@ func (a *App) productShow(w http.ResponseWriter, r *http.Request) {
 	var skus []SKU
 	rows, err := a.queries.ListSKUs(r.Context(), product.ID)
 	if err != nil {
-		a.fail(w, err)
+		a.fail(w, r, err)
 		return
 	}
 	for _, row := range rows {
@@ -80,14 +80,14 @@ func (a *App) productShow(w http.ResponseWriter, r *http.Request) {
 }
 func (a *App) productForm(w http.ResponseWriter, r *http.Request) {
 	p := Product{Status: "draft", TaxRate: 10}
-	title := "商品登録"
+	title := "title.product_new"
 	if r.PathValue("id") != "" {
 		product, ok := a.findProduct(w, r)
 		if !ok {
 			return
 		}
 		p = product
-		title = "商品編集"
+		title = "title.product_edit"
 	}
 	a.render(w, r, productviews.Form(a.viewData(w, r, title), p, ""), 200)
 }
@@ -105,7 +105,7 @@ func (a *App) saveProduct(w http.ResponseWriter, r *http.Request) {
 	p.Status = r.PostForm.Get("status")
 	p.TaxRate, _ = strconv.Atoi(r.PostForm.Get("tax_rate"))
 	if err := p.Validate(); err != nil {
-		a.render(w, r, productviews.Form(a.viewData(w, r, "商品入力"), p, err.Error()), 422)
+		a.render(w, r, productviews.Form(a.viewData(w, r, "title.product_form"), p, a.inputError(r, err)), 422)
 		return
 	}
 	var err error
@@ -115,7 +115,7 @@ func (a *App) saveProduct(w http.ResponseWriter, r *http.Request) {
 		err = a.queries.UpdateProduct(r.Context(), store.UpdateProductParams{ID: p.ID, Name: p.Name, Description: p.Description, Status: p.Status, TaxRate: p.TaxRate})
 	}
 	if err != nil {
-		a.fail(w, err)
+		a.fail(w, r, err)
 		return
 	}
 	redirect(w, r, fmt.Sprintf("/console/products/%d", p.ID))
@@ -126,7 +126,7 @@ func (a *App) deleteProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := a.queries.DeleteProduct(r.Context(), p.ID); err != nil {
-		a.fail(w, err)
+		a.fail(w, r, err)
 		return
 	}
 	redirect(w, r, "/console/products")
@@ -145,7 +145,7 @@ func (a *App) findSKU(w http.ResponseWriter, r *http.Request, productID int64) (
 		return s, false
 	}
 	if err != nil {
-		a.fail(w, err)
+		a.fail(w, r, err)
 		return s, false
 	}
 	return s, true
@@ -162,7 +162,7 @@ func (a *App) skuForm(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	a.render(w, r, skuviews.Form(a.viewData(w, r, "SKU入力"), p, s, ""), 200)
+	a.render(w, r, skuviews.Form(a.viewData(w, r, "title.sku_form"), p, s, ""), 200)
 }
 func (a *App) saveSKU(w http.ResponseWriter, r *http.Request) {
 	p, ok := a.findProduct(w, r)
@@ -199,13 +199,13 @@ func (a *App) saveSKU(w http.ResponseWriter, r *http.Request) {
 			if errors.As(err, &pgErr) && pgErr.SQLState() == "23505" {
 				err = errors.New(dbMessage(err))
 			} else {
-				a.fail(w, err)
+				a.fail(w, r, err)
 				return
 			}
 		}
 	}
 	if err != nil {
-		a.render(w, r, skuviews.Form(a.viewData(w, r, "SKU入力"), p, s, err.Error()), 422)
+		a.render(w, r, skuviews.Form(a.viewData(w, r, "title.sku_form"), p, s, a.inputError(r, err)), 422)
 		return
 	}
 	redirect(w, r, fmt.Sprintf("/console/products/%d", p.ID))
@@ -220,7 +220,7 @@ func (a *App) deleteSKU(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := a.queries.DeleteSKU(r.Context(), store.DeleteSKUParams{ID: s.ID, ProductID: p.ID}); err != nil {
-		a.fail(w, err)
+		a.fail(w, r, err)
 		return
 	}
 	redirect(w, r, fmt.Sprintf("/console/products/%d", p.ID))

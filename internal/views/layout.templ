@@ -4,14 +4,30 @@ import "go-todo/internal/domain"
 import "go-todo/internal/views/components"
 
 type Page struct {
-	Title string
-	Admin domain.Admin
-	CSRF  string
+	Title  string
+	Admin  domain.Admin
+	CSRF   string
+	Locale string
+	T      func(string) string
 }
 
-templ Document(title string) {
+func (p Page) Text(id string) string {
+	if p.T == nil {
+		return id
+	}
+	return p.T(id)
+}
+
+func (p Page) Language() string {
+	if p.Locale == "en" {
+		return "en"
+	}
+	return "ja"
+}
+
+templ Document(title, locale string) {
 	<!DOCTYPE html>
-	<html lang="ja">
+	<html lang={ locale }>
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -26,29 +42,29 @@ templ Document(title string) {
 }
 
 templ Console(page Page, section components.Section) {
-	@Document(page.Title) {
-		@components.Sidebar(section)
+	@Document(page.Title, page.Language()) {
+		@components.Sidebar(section, page.Text)
 		<div id="sidebar-backdrop" class="fixed inset-0 z-30 hidden bg-gray-900/50 lg:hidden"></div>
 		<div class="min-h-screen lg:pl-64">
-			@components.Header(page.Admin.Email, page.CSRF)
+			@components.Header(page.Admin.Email, page.CSRF, page.Text)
 			<main class="mx-auto w-full max-w-screen-2xl p-4 sm:p-6 lg:p-8">
 				<div class="mb-6">
 					<div>
-						<p class="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-500">Go Todo / Console</p>
+						<p class="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-500">{ page.Text("console.breadcrumb") }</p>
 						<h1 class="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">{ page.Title }</h1>
 					</div>
 				</div>
 				{ children... }
 			</main>
 			<footer class="border-t border-gray-200 bg-white px-4 py-4 text-xs text-gray-500 sm:px-6 lg:px-8">
-				<div class="mx-auto flex max-w-screen-2xl justify-between"><span>Go Todo</span><span>管理ワークスペース</span></div>
+				<div class="mx-auto flex max-w-screen-2xl justify-between"><span>Go Todo</span><span>{ page.Text("console.footer") }</span></div>
 			</footer>
 		</div>
 	}
 }
 
 templ Auth(page Page) {
-	@Document(page.Title) {
+	@Document(page.Title, page.Language()) {
 		<main class="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-12">
 			<a class="mb-8 flex items-center justify-center gap-3 text-2xl font-bold tracking-tight text-gray-900" href="/auth/sign_in">
 				<span class="grid size-10 place-items-center rounded-lg bg-blue-700 text-xl text-white">G</span> Go Todo
