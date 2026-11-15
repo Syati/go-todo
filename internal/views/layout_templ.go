@@ -49,7 +49,7 @@ func Document(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " · Go Todo</title><link rel=\"stylesheet\" href=\"/static/app.css\"><script src=\"/static/app.js\" defer></script></head><body>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " · Go Todo</title><link rel=\"stylesheet\" href=\"/static/app.css\"><script src=\"/static/app.js\" defer></script></head><body class=\"min-h-screen bg-gray-50 font-sans text-gray-900 antialiased\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -99,7 +99,7 @@ func Console(page Page, section components.Section) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"workspace\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div id=\"sidebar-backdrop\" class=\"fixed inset-0 z-30 hidden bg-gray-900/50 lg:hidden\"></div><div class=\"min-h-screen lg:pl-64\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -107,14 +107,14 @@ func Console(page Page, section components.Section) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<main><div class=\"page-heading\"><div><p class=\"eyebrow\">GO TODO / CONSOLE</p><h1>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<main class=\"mx-auto w-full max-w-screen-2xl p-4 sm:p-6 lg:p-8\"><div class=\"mb-6\"><div><p class=\"mb-2 text-xs font-semibold uppercase tracking-widest text-gray-500\">Go Todo / Console</p><h1 class=\"text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(page.Title)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layout.templ`, Line: 37, Col: 22}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/layout.templ`, Line: 38, Col: 90}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -128,7 +128,7 @@ func Console(page Page, section components.Section) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</main><footer>Go Todo <span>管理ワークスペース</span></footer></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</main><footer class=\"border-t border-gray-200 bg-white px-4 py-4 text-xs text-gray-500 sm:px-6 lg:px-8\"><div class=\"mx-auto flex max-w-screen-2xl justify-between\"><span>Go Todo</span><span>管理ワークスペース</span></div></footer></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -172,7 +172,7 @@ func Auth(page Page) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<main class=\"auth\"><a class=\"brand\" href=\"/auth/sign_in\"><span class=\"brand-icon\">G</span> Go Todo</a>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<main class=\"mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-12\"><a class=\"mb-8 flex items-center justify-center gap-3 text-2xl font-bold tracking-tight text-gray-900\" href=\"/auth/sign_in\"><span class=\"grid size-10 place-items-center rounded-lg bg-blue-700 text-xl text-white\">G</span> Go Todo</a>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

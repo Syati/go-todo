@@ -1,16 +1,16 @@
-.PHONY: dev run test lint check build up down migrate rollback db-status seed generate generate-sql generate-views format-views tools bootstrap
-dev:
+.PHONY: dev run test lint check build up down migrate rollback db-status seed generate generate-sql generate-views generate-assets format-views tools bootstrap
+dev: generate-views generate-assets
 	mise exec -- air
-run: generate-views
+run: generate-views generate-assets
 	mise exec -- go run ./cmd/go-todo serve
-test: generate-views
+test: generate-views generate-assets
 	mise exec -- go test -race ./...
-lint: generate-views
+lint: generate-views generate-assets
 	mise exec -- golangci-lint run --fix
 check:
 	mise exec -- go tool templ generate -check
 	mise exec -- go vet ./...
-build: generate-views
+build: generate-views generate-assets
 	mise exec -- go build -o bin/go-todo ./cmd/go-todo
 up:
 	docker compose up -d --wait db
@@ -24,11 +24,13 @@ db-status:
 	mise exec -- go run ./cmd/go-todo db status
 seed:
 	mise exec -- go run ./cmd/go-todo db seed
-generate: generate-sql generate-views
+generate: generate-sql generate-views generate-assets
 generate-sql:
 	mise exec -- sqlc generate
 generate-views:
 	mise exec -- go tool templ generate
+generate-assets:
+	npm run build --prefix assets
 format-views:
 	mise exec -- go tool templ fmt internal/views
 	mise exec -- go tool templ generate

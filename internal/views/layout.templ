@@ -19,7 +19,7 @@ templ Document(title string) {
 			<link rel="stylesheet" href="/static/app.css"/>
 			<script src="/static/app.js" defer></script>
 		</head>
-		<body>
+		<body class="min-h-screen bg-gray-50 font-sans text-gray-900 antialiased">
 			{ children... }
 		</body>
 	</html>
@@ -28,26 +28,31 @@ templ Document(title string) {
 templ Console(page Page, section components.Section) {
 	@Document(page.Title) {
 		@components.Sidebar(section)
-		<div class="workspace">
+		<div id="sidebar-backdrop" class="fixed inset-0 z-30 hidden bg-gray-900/50 lg:hidden"></div>
+		<div class="min-h-screen lg:pl-64">
 			@components.Header(page.Admin.Email, page.CSRF)
-			<main>
-				<div class="page-heading">
+			<main class="mx-auto w-full max-w-screen-2xl p-4 sm:p-6 lg:p-8">
+				<div class="mb-6">
 					<div>
-						<p class="eyebrow">GO TODO / CONSOLE</p>
-						<h1>{ page.Title }</h1>
+						<p class="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-500">Go Todo / Console</p>
+						<h1 class="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">{ page.Title }</h1>
 					</div>
 				</div>
 				{ children... }
 			</main>
-			<footer>Go Todo <span>管理ワークスペース</span></footer>
+			<footer class="border-t border-gray-200 bg-white px-4 py-4 text-xs text-gray-500 sm:px-6 lg:px-8">
+				<div class="mx-auto flex max-w-screen-2xl justify-between"><span>Go Todo</span><span>管理ワークスペース</span></div>
+			</footer>
 		</div>
 	}
 }
 
 templ Auth(page Page) {
 	@Document(page.Title) {
-		<main class="auth">
-			<a class="brand" href="/auth/sign_in"><span class="brand-icon">G</span> Go Todo</a>
+		<main class="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-12">
+			<a class="mb-8 flex items-center justify-center gap-3 text-2xl font-bold tracking-tight text-gray-900" href="/auth/sign_in">
+				<span class="grid size-10 place-items-center rounded-lg bg-blue-700 text-xl text-white">G</span> Go Todo
+			</a>
 			{ children... }
 		</main>
 	}

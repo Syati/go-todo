@@ -42,20 +42,20 @@ func Show(page views.Page, target domain.Admin) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<a href=\"/console/admins\">← 管理者一覧</a><section class=\"card detail\"><div class=\"detail-row\"><span class=\"muted\">メールアドレス</span> <strong>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<a class=\"mb-4 inline-flex items-center text-sm font-medium text-blue-700 hover:underline\" href=\"/console/admins\">← 管理者一覧</a><section class=\"max-w-3xl rounded-lg border border-gray-200 bg-white p-5 shadow-sm sm:p-8\"><div class=\"grid gap-2 border-b border-gray-100 py-4 sm:grid-cols-[180px_1fr] sm:gap-6\"><span class=\"text-sm text-gray-500\">メールアドレス</span> <strong class=\"text-sm font-medium text-gray-900\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(target.Email)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/admins/show.templ`, Line: 13, Col: 26}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/admins/show.templ`, Line: 13, Col: 68}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</strong></div><div class=\"detail-row\"><span class=\"muted\">権限</span>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</strong></div><div class=\"grid gap-2 py-4 sm:grid-cols-[180px_1fr] sm:gap-6\"><span class=\"text-sm text-gray-500\">権限</span>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -68,14 +68,14 @@ func Show(page views.Page, target domain.Admin) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if page.Admin.Role == "super_admin" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"actions\"><a class=\"button\" href=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"mt-5 flex flex-wrap gap-3 border-t border-gray-200 pt-5\"><a class=\"rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300\" href=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var4 string
 				templ_7745c5c3_Var4, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.SafeURL(Path(target.ID) + "/edit")).ResolveURL(ctx)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/admins/show.templ`, Line: 21, Col: 70}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/admins/show.templ`, Line: 21, Col: 199}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 				if templ_7745c5c3_Err != nil {
@@ -107,7 +107,7 @@ func Show(page views.Page, target domain.Admin) templ.Component {
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<button class=\"text-button danger\">削除</button></form>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<button class=\"rounded-lg border border-red-300 bg-white px-5 py-2.5 text-sm font-medium text-red-700 hover:bg-red-50 focus:outline-none focus:ring-4 focus:ring-red-100\">削除</button></form>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}

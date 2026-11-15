@@ -5,14 +5,27 @@ tmp_dir = "tmp"
 cmd = "mise exec -- go build -o ./tmp/go-todo ./cmd/go-todo"
 entrypoint = ["./tmp/go-todo", "serve"]
 include_ext = ["go", "templ", "css", "js", "sql", "yml", "yaml"]
-exclude_dir = ["tmp", "bin", "vendor", "docs"]
+exclude_dir = ["tmp", "bin", "vendor", "node_modules", "docs"]
 delay = 500
 
 [[build.rules]]
 name = "templ"
 include_dir = ["internal/views"]
 include_ext = ["templ"]
-cmd = "mise exec -- go tool templ generate"
+cmd = "mise exec -- go tool templ generate && npm --prefix assets run build:css"
+delay = 500
+
+[[build.rules]]
+name = "styles"
+include_file = ["assets/css/input.css"]
+cmd = "npm --prefix assets run build:css"
+delay = 500
+
+[[build.rules]]
+name = "javascript"
+include_dir = ["assets/js"]
+include_ext = ["js"]
+cmd = "npm --prefix assets run build:js"
 delay = 500
 
 [proxy]

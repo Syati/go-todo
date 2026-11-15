@@ -103,8 +103,9 @@ rtk make build
 | `make format-views` | `.templ` の整形と画面の生成 |
 | `make generate-views` | templ だけ生成 |
 | `make generate-sql` | sqlc だけ生成 |
-| `make generate` | sqlc と templ を生成 |
-| `make run` / `make test` / `make build` | templ を生成してから各処理を実行 |
+| `make generate` | sqlc、templ、CSS/Flowbite 資産を生成 |
+| `make generate-assets` | Tailwind CSS と Flowbite の JavaScript を生成 |
+| `make run` / `make test` / `make build` | templ と CSS/Flowbite 資産を生成してから各処理を実行 |
 | `make check` | 生成物の更新漏れを検査し、`go vet` を実行 |
 
 新しい画面は対応するパッケージに `.templ` を追加し、ハンドラーから型付きの関数を呼び出します。

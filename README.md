@@ -28,6 +28,7 @@ mise、Docker Compose が必要です。リポジトリのルートで実行し�
 
 ```sh
 rtk mise install
+rtk npm ci --prefix assets
 rtk make up
 rtk make migrate
 rtk make seed
@@ -35,7 +36,7 @@ rtk make dev
 ```
 
 <http://127.0.0.1:8081> を開き、開発用管理者 `admin@example.com` / `password123` でログインします。
-`make dev` は Air で Go サーバーを再起動し、`.templ` の変更時には templ を再生成します。ビルド成功後はブラウザーも自動更新します。通常起動には `make run` を使います。
+`make dev` は Air で Go サーバーを再起動し、`.templ` と CSS の変更時にはそれぞれの生成処理を実行します。ビルド成功後はブラウザーも自動更新します。通常起動には `make run` を使います。
 seed は `rails8-todo` と同じ開発用管理者・商品/SKU を登録します。再実行しても既存データは変更しません。
 データは `db/seeds/development/data/` の `admins.yml`・`products.yml` で管理し、バイナリに埋め込みます。
 対象データと追加手順は [seed の使い方](docs/seeds.md) を参照してください。
@@ -186,12 +187,13 @@ GitHub Actions の [CI](.github/workflows/ci.yml) は push・pull request 時に
 ```sh
 rtk make format-views    # .templ を整形し、Go コードを生成
 rtk make generate-views  # 画面だけ生成
-rtk make generate       # sqlc と templ の両方を生成
+rtk make generate       # sqlc、templ、CSS/Flowbite 資産を生成
 ```
 
 templ のバージョンは `go.mod` の依存と `tool` 宣言で管理し、`go tool templ` で実行します。
 生成物 `*_templ.go` は直接編集せず、`.templ` と一緒に管理します。
-`make run`・`make test`・`make build` は画面を自動生成します。
+`make run`・`make test`・`make build` は画面とフロントエンド資産を自動生成します。
+CSS は Tailwind CSS v4 と Flowbite から生成し、CSS・Flowbite の JavaScript をバイナリに埋め込みます。変更時は `make generate-assets` で再生成します。
 `make check` は生成物の更新漏れを検査してから `go vet` を実行します。
 
 ## ディレクトリ
@@ -201,10 +203,13 @@ cmd/go-todo/           CLI エントリーポイント
 internal/cli/          Cobra のサブコマンド
 internal/config/       Viper による設定の読み込み・検証
 config/settings/      環境別・ローカルの YAML 設定
-internal/app/          認証・HTTP ハンドラー・静的ファイル
+internal/app/          認証・HTTP ハンドラー
 internal/domain/       管理者・商品・SKU の型と入力検証
 internal/views/        templ のレイアウト・部品・各画面と生成物
 internal/store/        sqlc の生成物
+assets/css/            Tailwind CSS の入力と設定
+assets/js/             アプリ JavaScript のソース
+assets/static/         Tailwind CSS と Flowbite JavaScript の生成物
 db/migrations/        goose migration と埋め込み定義
 db/queries/           sqlc の入力SQL
 db/seeds/             環境別 seed の入口と開発用データ

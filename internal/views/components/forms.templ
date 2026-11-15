@@ -6,12 +6,21 @@ templ CSRF(token string) {
 
 templ Alert(message string) {
 	if message != "" {
-		<div class="alert" role="alert">{ message }</div>
+		<div class="mb-5 flex items-center rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800" role="alert">
+			<span class="me-3 inline-flex size-5 shrink-0 items-center justify-center rounded-full border border-red-600 text-xs font-bold">!</span>
+			<span>{ message }</span>
+		</div>
 	}
 }
 
 templ StatusBadge(status string) {
-	<span class={ "badge", status }>{ statusLabel(status) }</span>
+	if status == "on_sale" {
+		<span class="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">{ statusLabel(status) }</span>
+	} else if status == "discontinued" {
+		<span class="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">{ statusLabel(status) }</span>
+	} else {
+		<span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">{ statusLabel(status) }</span>
+	}
 }
 
 func statusLabel(status string) string {
@@ -29,8 +38,8 @@ func statusLabel(status string) string {
 
 templ RoleBadge(role string) {
 	if role == "super_admin" {
-		<span class="badge on_sale">特権管理者</span>
+		<span class="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">特権管理者</span>
 	} else {
-		<span class="badge">オペレーター</span>
+		<span class="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">オペレーター</span>
 	}
 }

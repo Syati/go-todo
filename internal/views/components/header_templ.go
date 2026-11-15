@@ -26,14 +26,14 @@ func Header(email, csrf string) templ.Component {
 		}
 		ctx = templ.InitializeContext(ctx)
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<header><button type=\"button\" id=\"menu-toggle\" class=\"icon-button\" aria-label=\"メニューを切り替え\" aria-controls=\"sidebar\" aria-expanded=\"false\">☰</button> <span class=\"header-label\">管理コンソール</span><div class=\"account\"><span>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<header class=\"sticky top-0 z-20 flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3 sm:px-6 lg:px-8\"><button type=\"button\" id=\"menu-toggle\" class=\"inline-flex size-10 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 lg:hidden\" aria-label=\"メニューを切り替え\" aria-controls=\"sidebar\" aria-expanded=\"false\"><span class=\"text-xl\">☰</span></button> <span class=\"text-sm font-medium text-gray-600\">管理コンソール</span><div class=\"ml-auto flex items-center gap-3 sm:gap-5\"><span class=\"max-w-40 truncate text-sm text-gray-700 sm:max-w-none\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(email)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/components/header.templ`, Line: 8, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/components/header.templ`, Line: 10, Col: 78}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -47,7 +47,7 @@ func Header(email, csrf string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<button class=\"text-button\">ログアウト</button></form></div></header>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<button class=\"rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-100\">ログアウト</button></form></div></header>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

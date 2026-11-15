@@ -40,7 +40,7 @@ func Index(page views.Page) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"card detail\"><details><summary>商品とSKUの違いは？</summary><p>商品は名称・説明・税率などの共通情報、SKUはサイズ・カラーごとのコード・価格・在庫です。</p></details> <details><summary>管理者の権限は？</summary><p>オペレーターは商品とSKUの管理、管理者の閲覧ができます。特権管理者は管理者の登録・編集・削除も行えます。</p></details> <details><summary>パスワードを忘れた場合は？</summary><p>特権管理者にパスワードの再設定を依頼してください。このバージョンはメール送信による再設定に対応していません。</p></details></section>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white px-5 shadow-sm sm:px-8\"><details class=\"py-5\"><summary class=\"cursor-pointer text-sm font-medium text-gray-900\">商品とSKUの違いは？</summary><p class=\"mt-3 text-sm leading-relaxed text-gray-600\">商品は名称・説明・税率などの共通情報、SKUはサイズ・カラーごとのコード・価格・在庫です。</p></details> <details class=\"py-5\"><summary class=\"cursor-pointer text-sm font-medium text-gray-900\">管理者の権限は？</summary><p class=\"mt-3 text-sm leading-relaxed text-gray-600\">オペレーターは商品とSKUの管理、管理者の閲覧ができます。特権管理者は管理者の登録・編集・削除も行えます。</p></details> <details class=\"py-5\"><summary class=\"cursor-pointer text-sm font-medium text-gray-900\">パスワードを忘れた場合は？</summary><p class=\"mt-3 text-sm leading-relaxed text-gray-600\">特権管理者にパスワードの再設定を依頼してください。このバージョンはメール送信による再設定に対応していません。</p></details></section>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

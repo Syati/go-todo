@@ -1,5 +1,7 @@
 /.env
 /bin/
+/node_modules/
+/assets/node_modules/
 /tmp/
 /coverage.out
 /config/settings/*.local.yml

@@ -7,37 +7,37 @@ import "go-todo/internal/views/components"
 templ Form(page views.Page, product domain.Product, errorMessage string) {
 	@views.Console(page, components.ProductsSection) {
 		@components.Alert(errorMessage)
-		<section class="card form-card">
-			<form method="post" action={ templ.SafeURL(Path(product.ID)) } class="stack">
+		<section class="max-w-4xl rounded-lg border border-gray-200 bg-white p-5 shadow-sm sm:p-8">
+			<form method="post" action={ templ.SafeURL(Path(product.ID)) } class="space-y-5">
 				@components.CSRF(page.CSRF)
-				<label>
+				<label class="block text-sm font-medium text-gray-900">
 					商品名 <span class="required">必須</span>
-					<input name="name" value={ product.Name } maxlength="100" required/>
+					<input class="mt-2 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500" name="name" value={ product.Name } maxlength="100" required/>
 				</label>
-				<label>
+				<label class="block text-sm font-medium text-gray-900">
 					説明
-					<textarea name="description" rows="5" maxlength="2000">{ product.Description }</textarea>
+					<textarea class="mt-2 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500" name="description" rows="5" maxlength="2000">{ product.Description }</textarea>
 				</label>
-				<div class="form-grid">
-					<label>
+				<div class="grid gap-5 sm:grid-cols-2">
+					<label class="block text-sm font-medium text-gray-900">
 						ステータス
-						<select name="status">
+						<select class="mt-2 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500" name="status">
 							<option value="draft" selected={ product.Status == "draft" }>下書き</option>
 							<option value="on_sale" selected={ product.Status == "on_sale" }>販売中</option>
 							<option value="discontinued" selected={ product.Status == "discontinued" }>販売終了</option>
 						</select>
 					</label>
-					<label>
+					<label class="block text-sm font-medium text-gray-900">
 						税率
-						<select name="tax_rate">
+						<select class="mt-2 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500" name="tax_rate">
 							<option value="10" selected={ product.TaxRate == 10 }>標準税率 10%</option>
 							<option value="8" selected={ product.TaxRate == 8 }>軽減税率 8%</option>
 						</select>
 					</label>
 				</div>
-				<div class="actions">
-					<button class="button">保存する</button>
-					<a class="button secondary" href={ templ.SafeURL(Path(product.ID)) }>キャンセル</a>
+				<div class="flex flex-wrap gap-3 border-t border-gray-200 pt-5">
+					<button class="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">保存する</button>
+					<a class="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-100" href={ templ.SafeURL(Path(product.ID)) }>キャンセル</a>
 				</div>
 			</form>
 		</section>

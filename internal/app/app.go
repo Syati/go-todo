@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"database/sql"
-	"embed"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -18,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"go-todo/assets"
 	"go-todo/internal/store"
 	"go-todo/internal/views"
 	authviews "go-todo/internal/views/auth"
@@ -29,9 +29,6 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"golang.org/x/crypto/bcrypt"
 )
-
-//go:embed static/*
-var assets embed.FS
 
 type App struct {
 	db        *sql.DB
@@ -102,7 +99,7 @@ func (a *App) Bootstrap(ctx context.Context, email, password string) error {
 
 func (a *App) Handler() http.Handler {
 	mux := http.NewServeMux()
-	static, _ := fs.Sub(assets, "static")
+	static, _ := fs.Sub(assets.Files, "static")
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(static))))
 	mux.HandleFunc("GET /up", func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), time.Second)

@@ -18,13 +18,17 @@ func (p Pagination) URL(number int) string {
 }
 
 templ Pager(p Pagination) {
-	<div class="pagination">
+	<div class="flex items-center justify-between border-t border-gray-200 px-4 py-3 sm:px-6">
 		if p.Previous > 0 {
-			<a href={ templ.SafeURL(p.URL(p.Previous)) }>← 前へ</a>
+			<a class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100" href={ templ.SafeURL(p.URL(p.Previous)) }>← 前へ</a>
+		} else {
+			<span></span>
 		}
-		<span>{ strconv.Itoa(p.Page) } ページ</span>
+		<span class="text-sm text-gray-600">{ strconv.Itoa(p.Page) } ページ</span>
 		if p.Next > 0 {
-			<a href={ templ.SafeURL(p.URL(p.Next)) }>次へ →</a>
+			<a class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100" href={ templ.SafeURL(p.URL(p.Next)) }>次へ →</a>
+		} else {
+			<span></span>
 		}
 	</div>
 }

@@ -7,40 +7,40 @@ import "go-todo/internal/views/components"
 templ Form(page views.Page, target domain.Admin, errorMessage string) {
 	@views.Console(page, components.AdminsSection) {
 		@components.Alert(errorMessage)
-		<section class="card form-card">
-			<form method="post" action={ templ.SafeURL(Path(target.ID)) } class="stack">
+		<section class="max-w-3xl rounded-lg border border-gray-200 bg-white p-5 shadow-sm sm:p-8">
+			<form method="post" action={ templ.SafeURL(Path(target.ID)) } class="space-y-5">
 				@components.CSRF(page.CSRF)
-				<label>
+				<label class="block text-sm font-medium text-gray-900">
 					メールアドレス
-					<input type="email" name="email" value={ target.Email } required autocomplete="off"/>
+					<input class="mt-2 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500" type="email" name="email" value={ target.Email } required autocomplete="off"/>
 				</label>
 				if target.ID != 0 && page.Admin.ID != target.ID {
-					<label>
+					<label class="block text-sm font-medium text-gray-900">
 						権限
-						<select name="role">
+						<select class="mt-2 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500" name="role">
 							<option value="operator" selected={ target.Role == "operator" }>オペレーター</option>
 							<option value="super_admin" selected={ target.Role == "super_admin" }>特権管理者</option>
 						</select>
 					</label>
 				}
-				<label>
+				<label class="block text-sm font-medium text-gray-900">
 					パスワード
-					<input type="password" name="password" autocomplete="new-password" required={ target.ID == 0 } maxlength="72"/>
-					<small>
+					<input class="mt-2 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500" type="password" name="password" autocomplete="new-password" required={ target.ID == 0 } maxlength="72"/>
+					<small class="mt-1 block text-xs text-gray-500">
 						12〜72バイト。
 						if target.ID != 0 {
 							変更しない場合は空欄にしてください。
 						}
 					</small>
 				</label>
-				<label>
+				<label class="block text-sm font-medium text-gray-900">
 					パスワード（確認）
-					<input type="password" name="password_confirmation" autocomplete="new-password" maxlength="72"/>
+					<input class="mt-2 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500" type="password" name="password_confirmation" autocomplete="new-password" maxlength="72"/>
 				</label>
-				<p class="muted">新規管理者はオペレーターとして登録されます。編集すると既存のログイン状態は解除されます。</p>
-				<div class="actions">
-					<button class="button">保存する</button>
-					<a class="button secondary" href="/console/admins">キャンセル</a>
+				<p class="text-sm text-gray-500">新規管理者はオペレーターとして登録されます。編集すると既存のログイン状態は解除されます。</p>
+				<div class="flex flex-wrap gap-3 border-t border-gray-200 pt-5">
+					<button class="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300">保存する</button>
+					<a class="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-100" href="/console/admins">キャンセル</a>
 				</div>
 			</form>
 		</section>

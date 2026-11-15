@@ -46,7 +46,7 @@ func Form(page views.Page, target domain.Admin, errorMessage string) templ.Compo
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"card form-card\"><form method=\"post\" action=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"max-w-3xl rounded-lg border border-gray-200 bg-white p-5 shadow-sm sm:p-8\"><form method=\"post\" action=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -59,7 +59,7 @@ func Form(page views.Page, target domain.Admin, errorMessage string) templ.Compo
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" class=\"stack\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" class=\"space-y-5\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -67,14 +67,14 @@ func Form(page views.Page, target domain.Admin, errorMessage string) templ.Compo
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<label>メールアドレス <input type=\"email\" name=\"email\" value=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<label class=\"block text-sm font-medium text-gray-900\">メールアドレス <input class=\"mt-2 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500\" type=\"email\" name=\"email\" value=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templruntime.NewAttributeExpression(target.Email).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/admins/form.templ`, Line: 15, Col: 58}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/admins/form.templ`, Line: 15, Col: 199}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 			if templ_7745c5c3_Err != nil {
@@ -85,7 +85,7 @@ func Form(page views.Page, target domain.Admin, errorMessage string) templ.Compo
 				return templ_7745c5c3_Err
 			}
 			if target.ID != 0 && page.Admin.ID != target.ID {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<label>権限 <select name=\"role\"><option value=\"operator\" selected=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<label class=\"block text-sm font-medium text-gray-900\">権限 <select class=\"mt-2 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500\" name=\"role\"><option value=\"operator\" selected=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -116,20 +116,20 @@ func Form(page views.Page, target domain.Admin, errorMessage string) templ.Compo
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<label>パスワード <input type=\"password\" name=\"password\" autocomplete=\"new-password\" required=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<label class=\"block text-sm font-medium text-gray-900\">パスワード <input class=\"mt-2 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500\" type=\"password\" name=\"password\" autocomplete=\"new-password\" required=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templruntime.NewAttributeExpression(target.ID == 0).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/admins/form.templ`, Line: 28, Col: 97}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/admins/form.templ`, Line: 28, Col: 238}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" maxlength=\"72\"> <small>12〜72バイト。 ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" maxlength=\"72\"> <small class=\"mt-1 block text-xs text-gray-500\">12〜72バイト。 ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -139,7 +139,7 @@ func Form(page views.Page, target domain.Admin, errorMessage string) templ.Compo
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</small></label> <label>パスワード（確認） <input type=\"password\" name=\"password_confirmation\" autocomplete=\"new-password\" maxlength=\"72\"></label><p class=\"muted\">新規管理者はオペレーターとして登録されます。編集すると既存のログイン状態は解除されます。</p><div class=\"actions\"><button class=\"button\">保存する</button> <a class=\"button secondary\" href=\"/console/admins\">キャンセル</a></div></form></section>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</small></label> <label class=\"block text-sm font-medium text-gray-900\">パスワード（確認） <input class=\"mt-2 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500\" type=\"password\" name=\"password_confirmation\" autocomplete=\"new-password\" maxlength=\"72\"></label><p class=\"text-sm text-gray-500\">新規管理者はオペレーターとして登録されます。編集すると既存のログイン状態は解除されます。</p><div class=\"flex flex-wrap gap-3 border-t border-gray-200 pt-5\"><button class=\"rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300\">保存する</button> <a class=\"rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-100\" href=\"/console/admins\">キャンセル</a></div></form></section>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

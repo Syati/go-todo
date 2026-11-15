@@ -19,36 +19,36 @@ func Path(id int64) string {
 
 templ Index(page views.Page, data IndexData) {
 	@views.Console(page, components.AdminsSection) {
-		<section class="card">
-			<div class="toolbar">
-				<form method="get" class="filters">
-					<input name="q" value={ data.Query } placeholder="メールアドレスで検索" aria-label="メールアドレス"/>
-					<select name="sort" aria-label="並び順">
+		<section class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+			<div class="flex flex-col gap-3 border-b border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+				<form method="get" class="flex flex-col gap-3 sm:flex-row">
+					<input class="rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500" name="q" value={ data.Query } placeholder="メールアドレスで検索" aria-label="メールアドレス"/>
+					<select class="rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500" name="sort" aria-label="並び順">
 						<option value="desc">新しい順</option>
 						<option value="asc" selected={ data.Sort == "asc" }>古い順</option>
 					</select>
-					<button class="button secondary">検索</button>
+					<button class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-100">検索</button>
 				</form>
 				if page.Admin.Role == "super_admin" {
-					<a class="button" href="/console/admins/new">＋ 管理者登録</a>
+					<a class="rounded-lg bg-blue-700 px-4 py-2 text-center text-sm font-medium text-white hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300" href="/console/admins/new">＋ 管理者登録</a>
 				}
 			</div>
-			<div class="table-scroll">
-				<table>
-					<thead>
-						<tr><th>ID</th><th>メールアドレス</th><th>権限</th><th></th></tr>
+			<div class="overflow-x-auto">
+				<table class="w-full text-left text-sm text-gray-500">
+					<thead class="bg-gray-50 text-xs uppercase text-gray-700">
+						<tr><th scope="col" class="px-6 py-3">ID</th><th scope="col" class="px-6 py-3">メールアドレス</th><th scope="col" class="px-6 py-3">権限</th><th scope="col" class="px-6 py-3"><span class="sr-only">操作</span></th></tr>
 					</thead>
 					<tbody>
 						for _, admin := range data.Admins {
-							<tr>
-								<td class="muted">#{ strconv.FormatInt(admin.ID, 10) }</td>
-								<td><a class="item-name" href={ templ.SafeURL(Path(admin.ID)) }>{ admin.Email }</a></td>
-								<td>@components.RoleBadge(admin.Role)</td>
-								<td><a href={ templ.SafeURL(Path(admin.ID)) }>詳細 →</a></td>
+							<tr class="border-b bg-white hover:bg-gray-50">
+								<td class="px-6 py-4">#{ strconv.FormatInt(admin.ID, 10) }</td>
+								<td class="px-6 py-4 font-medium text-gray-900"><a class="hover:text-blue-700" href={ templ.SafeURL(Path(admin.ID)) }>{ admin.Email }</a></td>
+								<td class="px-6 py-4">@components.RoleBadge(admin.Role)</td>
+								<td class="px-6 py-4 text-right"><a class="font-medium text-blue-700 hover:underline" href={ templ.SafeURL(Path(admin.ID)) }>詳細 →</a></td>
 							</tr>
 						}
 						if len(data.Admins) == 0 {
-							<tr><td colspan="4" class="empty">該当する管理者がいません。</td></tr>
+							<tr><td colspan="4" class="px-6 py-12 text-center text-gray-500">該当する管理者がいません。</td></tr>
 						}
 					</tbody>
 				</table>

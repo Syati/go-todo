@@ -1,0 +1,15 @@
+{
+  "name": "go-todo-assets",
+  "private": true,
+  "scripts": {
+    "build": "npm run build:css && npm run build:js",
+    "build:css": "tailwindcss -i ./css/input.css -o ./static/app.css --minify",
+    "build:js": "esbuild ./js/app.js --bundle --minify --outfile=./static/app.js"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.3.5",
+    "esbuild": "0.28.2",
+    "flowbite": "4.0.2",
+    "tailwindcss": "4.3.5"
+  }
+}

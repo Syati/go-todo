@@ -20,6 +20,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: jdx/mise-action@v5.2.8
+      - name: Install frontend dependencies
+        run: npm ci --prefix assets
       - name: Run lint with fixes
         run: make lint
       - name: Check for uncommitted fixes and generated code
@@ -33,6 +35,8 @@ jobs:
       - uses: actions/checkout@v7.0.1
       - uses: jdx/mise-action@v5.2.8
         with:
-          install_args: go
+          install_args: go node
+      - name: Install frontend dependencies
+        run: npm ci --prefix assets
       - name: Run unit tests with race detector
         run: make test
