@@ -1,4 +1,6 @@
-.PHONY: run test lint check build up down migrate rollback db-status seed generate generate-sql generate-views format-views tools bootstrap
+.PHONY: dev run test lint check build up down migrate rollback db-status seed generate generate-sql generate-views format-views tools bootstrap
+dev:
+	mise exec -- air
 run: generate-views
 	mise exec -- go run ./cmd/go-todo serve
 test: generate-views

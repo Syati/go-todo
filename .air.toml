@@ -1,0 +1,22 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "mise exec -- go build -o ./tmp/go-todo ./cmd/go-todo"
+entrypoint = ["./tmp/go-todo", "serve"]
+include_ext = ["go", "templ", "css", "js", "sql", "yml", "yaml"]
+exclude_dir = ["tmp", "bin", "vendor", "docs"]
+delay = 500
+
+[[build.rules]]
+name = "templ"
+include_dir = ["internal/views"]
+include_ext = ["templ"]
+cmd = "mise exec -- go tool templ generate"
+delay = 500
+
+[proxy]
+enabled = true
+proxy_port = 8081
+app_port = 8080
+app_start_timeout = 10000

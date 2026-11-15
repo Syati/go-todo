@@ -31,10 +31,11 @@ rtk mise install
 rtk make up
 rtk make migrate
 rtk make seed
-rtk make run
+rtk make dev
 ```
 
-<http://127.0.0.1:8080> を開き、開発用管理者 `admin@example.com` / `password123` でログインします。
+<http://127.0.0.1:8081> を開き、開発用管理者 `admin@example.com` / `password123` でログインします。
+`make dev` は Air で Go サーバーを再起動し、`.templ` の変更時には templ を再生成します。ビルド成功後はブラウザーも自動更新します。通常起動には `make run` を使います。
 seed は `rails8-todo` と同じ開発用管理者・商品/SKU を登録します。再実行しても既存データは変更しません。
 データは `db/seeds/development/data/` の `admins.yml`・`products.yml` で管理し、バイナリに埋め込みます。
 対象データと追加手順は [seed の使い方](docs/seeds.md) を参照してください。

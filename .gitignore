@@ -1,5 +1,6 @@
 /.env
 /bin/
+/tmp/
 /coverage.out
 /config/settings/*.local.yml
 /.idea/
