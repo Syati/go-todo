@@ -8,11 +8,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"go-todo/internal/i18n"
+
 	"github.com/a-h/templ"
 	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go-todo/internal/i18n"
 )
 
 func TestRenderFailureDoesNotSendPartialPage(t *testing.T) {

@@ -3,13 +3,13 @@ package app
 import (
 	"database/sql"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"go-todo/internal/i18n"
 
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
-	"log/slog"
 )
 
 const (
