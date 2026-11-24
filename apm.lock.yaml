@@ -1,0 +1,53 @@
+lockfile_version: '4'
+apm_version: 0.38.1
+manifest_targets:
+- codex
+dependencies:
+- repo_url: vercel-labs/agent-browser
+  name: agent-browser
+  host: github.com
+  resolved_commit: 0a923358ea989d7602f0d06507ad3447c62ffe9b
+  version: unknown
+  virtual_path: skills/agent-browser
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/agent-browser
+  - .agents/skills/agent-browser/LICENSE
+  - .agents/skills/agent-browser/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/agent-browser/LICENSE: sha256:014bb31e83d5c2e76aea1cc6e82217346ab41362f32cb355ad0f5c10aa0aeaff
+    .agents/skills/agent-browser/SKILL.md: sha256:7d46deeb0101e84f8d70fd2e5cd18e3b6017edfb973607ff23e95e22c92ce73e
+  content_hash: sha256:32cd55dc4673dc5f7e27502d06d0ae5cd357ba858aed26bad4d37938e1e17fdb
+  carried_licenses:
+  - path: LICENSE
+    source: LICENSE
+    hash: sha256:014bb31e83d5c2e76aea1cc6e82217346ab41362f32cb355ad0f5c10aa0aeaff
+deployments:
+- kind: project-relative
+  target: codex
+  value: .agents/skills/agent-browser
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-browser/skills/agent-browser
+  active_owner: vercel-labs/agent-browser/skills/agent-browser
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/agent-browser/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-browser/skills/agent-browser
+  active_owner: vercel-labs/agent-browser/skills/agent-browser
+  content_hash: sha256:014bb31e83d5c2e76aea1cc6e82217346ab41362f32cb355ad0f5c10aa0aeaff
+- kind: project-relative
+  target: codex
+  value: .agents/skills/agent-browser/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - vercel-labs/agent-browser/skills/agent-browser
+  active_owner: vercel-labs/agent-browser/skills/agent-browser
+  content_hash: sha256:7d46deeb0101e84f8d70fd2e5cd18e3b6017edfb973607ff23e95e22c92ce73e

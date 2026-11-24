@@ -58,6 +58,27 @@ bootstrap は管理者が存在する DB を変更しません。
 DB は `127.0.0.1:5433` で待ち受けます。Compose の認証情報はローカル開発専用です。
 `rtk make down` はコンテナを停止します。DB の volume は残ります。
 
+## エージェントのスキル管理
+
+Codex 用のスキルや MCP サーバーは Agent Package Manager（APM）で管理します。
+APM のインストールには mise と uv が必要です。
+
+```sh
+rtk mise install pipx:apm-cli
+rtk mise exec -- apm install --frozen
+```
+
+スキルを追加するときは `rtk mise exec -- apm install <owner>/<repo>` を実行し、
+`apm.yml` と `apm.lock.yaml` をコミットします。Codex 用に展開されたスキルは
+`.agents/skills/` に置かれ、ロックファイルから再現できます。
+
+`agent-browser` スキルでブラウザーを操作するには、CLI とブラウザーをセットアップします。
+
+```sh
+rtk mise exec -- npm install -g agent-browser
+rtk mise exec -- agent-browser install
+```
+
 ## CLI
 
 `cmd/go-todo/main.go` が実行の入口で、Cobra の定義は `internal/cli` に置きます。

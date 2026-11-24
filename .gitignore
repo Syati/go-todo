@@ -6,4 +6,6 @@
 /coverage.out
 /config/settings/*.local.yml
 /.idea/
+apm_modules/
+/.agents/skills/
 *~

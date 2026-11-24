@@ -1,0 +1,16 @@
+name: go-todo
+version: 1.0.0
+description: Agent dependencies for go-todo
+author: ''
+# Which agent platforms to deploy to.
+# Resolution order: --target flag > this field > 'apm config set target'
+# > auto-detect from filesystem.
+# Accepted values: agent-skills, antigravity, claude, codex, copilot, cursor, gemini, grok-bot, grok-build, hermes, kiro, opencode, windsurf
+targets:
+  - codex
+dependencies:
+  apm:
+    - vercel-labs/agent-browser/skills/agent-browser
+  mcp: []
+includes: auto
+scripts: {}
