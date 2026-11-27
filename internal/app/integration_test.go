@@ -326,3 +326,44 @@ func TestLoginLimitAcrossInstances(t *testing.T) {
 	require.NoError(t, a.db.QueryRowContext(ctx, "SELECT count(*) FROM login_attempts").Scan(&count))
 	assert.Zero(t, count)
 }
+
+func TestRecoverSoleSuperAdmin(t *testing.T) {
+	a := testApp(t)
+	ctx := t.Context()
+	b := newBrowser(t, a)
+	b.login("admin@example.test")
+	oldSession := b.cookies["session"]
+	require.NotNil(t, oldSession)
+	admin, err := a.queries.FindLoginAdmin(ctx, "admin@example.test")
+	require.NoError(t, err)
+	for range 5 {
+		_, err := a.queries.ReserveLoginAttempt(ctx, tokenHash(admin.Email))
+		require.NoError(t, err)
+	}
+
+	require.Error(t, a.RecoverSoleSuperAdmin(ctx, "absent@example.test", "replacement-123", "operator / INC-123"))
+	require.NoError(t, a.RecoverSoleSuperAdmin(ctx, admin.Email, "replacement-123", "operator / INC-123"))
+	_, err = a.queries.FindSessionAdmin(ctx, tokenHash(oldSession.Value))
+	assert.ErrorIs(t, err, sql.ErrNoRows)
+	_, err = a.queries.LockLoginAdminCredentials(ctx, store.LockLoginAdminCredentialsParams{ID: admin.ID, PasswordHash: admin.PasswordHash})
+	assert.ErrorIs(t, err, sql.ErrNoRows)
+
+	require.Equal(t, http.StatusOK, b.request("GET", "/auth/sign_in", nil).Code)
+	res := b.request("POST", "/auth/sign_in", url.Values{"email": {admin.Email}, "password": {"test-password-123"}})
+	require.Equal(t, http.StatusUnprocessableEntity, res.Code)
+	res = b.request("POST", "/auth/sign_in", url.Values{"email": {admin.Email}, "password": {"replacement-123"}})
+	require.Equal(t, http.StatusSeeOther, res.Code, res.Body.String())
+	assert.Equal(t, http.StatusOK, b.request("GET", "/", nil).Code)
+
+	_, err = a.db.ExecContext(ctx, "INSERT INTO admins (email, password_hash, role) VALUES ('second@example.test', $1, 'super_admin')", admin.PasswordHash)
+	require.NoError(t, err)
+	require.Error(t, a.RecoverSoleSuperAdmin(ctx, admin.Email, "another-password-123", "operator / INC-456"))
+
+	var recoveredID int64
+	var operatorRef string
+	var count int
+	require.NoError(t, a.db.QueryRowContext(ctx, "SELECT admin_id, operator_ref, count(*) OVER () FROM admin_recovery_events").Scan(&recoveredID, &operatorRef, &count))
+	assert.Equal(t, admin.ID, recoveredID)
+	assert.Equal(t, "operator / INC-123", operatorRef)
+	assert.Equal(t, 1, count)
+}

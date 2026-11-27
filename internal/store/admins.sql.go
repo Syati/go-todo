@@ -138,6 +138,24 @@ func (q *Queries) LockAdmins(ctx context.Context) error {
 	return err
 }
 
+const lockLoginAdminCredentials = `-- name: LockLoginAdminCredentials :one
+SELECT id FROM admins
+WHERE id = $1 AND password_hash = $2 AND deleted_at IS NULL
+FOR SHARE
+`
+
+type LockLoginAdminCredentialsParams struct {
+	ID           int64
+	PasswordHash string
+}
+
+func (q *Queries) LockLoginAdminCredentials(ctx context.Context, arg LockLoginAdminCredentialsParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, lockLoginAdminCredentials, arg.ID, arg.PasswordHash)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const updateAdmin = `-- name: UpdateAdmin :exec
 UPDATE admins SET email=$1,role=$2,
 password_hash=CASE WHEN $3::text='' THEN password_hash ELSE $3::text END
