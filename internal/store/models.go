@@ -18,6 +18,17 @@ type Admin struct {
 	CreatedAt    time.Time
 }
 
+type AuditEvent struct {
+	ID           int64
+	OccurredAt   time.Time
+	ActorAdminID int64
+	Action       string
+	TargetType   string
+	TargetID     int64
+	PreviousRole sql.NullString
+	NewRole      sql.NullString
+}
+
 type CatalogProduct struct {
 	ID          int64
 	Name        string

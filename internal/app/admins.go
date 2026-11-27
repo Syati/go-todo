@@ -102,24 +102,18 @@ func (a *App) saveAdmin(c *echo.Context) error {
 			hash, err = bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		}
 		if err == nil {
-			if target.ID == 0 {
-				target.ID, err = a.queries.CreateAdmin(c.Request().Context(), store.CreateAdminParams{Email: target.Email, PasswordHash: string(hash)})
-			} else {
-				// Revoke existing sessions when credentials or permissions change.
-				tx, txErr := a.db.BeginTx(c.Request().Context(), nil)
-				if txErr != nil {
-					return txErr
+			ctx := c.Request().Context()
+			err = a.auditedMutation(c, func(q *store.Queries) error {
+				if target.ID == 0 {
+					var createErr error
+					target.ID, createErr = q.CreateAdmin(ctx, store.CreateAdminParams{Email: target.Email, PasswordHash: string(hash)})
+					return createErr
 				}
-				defer func() { _ = tx.Rollback() }() // Commit 後の ErrTxDone は無視する。
-				q := a.queries.WithTx(tx)
-				err = q.UpdateAdmin(c.Request().Context(), store.UpdateAdminParams{ID: target.ID, Email: target.Email, Role: target.Role, NewPasswordHash: string(hash)})
-				if err == nil {
-					err = q.DeleteAdminSessions(c.Request().Context(), target.ID)
+				if err := q.UpdateAdmin(ctx, store.UpdateAdminParams{ID: target.ID, Email: target.Email, Role: target.Role, NewPasswordHash: string(hash)}); err != nil {
+					return err
 				}
-				if err == nil {
-					err = tx.Commit()
-				}
-			}
+				return q.DeleteAdminSessions(ctx, target.ID)
+			})
 		}
 		if err != nil {
 			var pgErr interface{ SQLState() string }
@@ -145,7 +139,9 @@ func (a *App) deleteAdmin(c *echo.Context) error {
 	if target.ID == current.ID {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, "error.self_delete")
 	}
-	if err := a.queries.DiscardAdmin(c.Request().Context(), target.ID); err != nil {
+	if err := a.auditedMutation(c, func(q *store.Queries) error {
+		return q.DiscardAdmin(c.Request().Context(), target.ID)
+	}); err != nil {
 		return err
 	}
 	return redirect(c, "/console/admins")
