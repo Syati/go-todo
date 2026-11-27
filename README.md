@@ -209,7 +209,7 @@ rtk proxy env 'TEST_DATABASE_URL=postgres://go_todo:local-development-only@127.0
 
 統合テストはランダムな専用スキーマに migration を適用し、テスト終了時にそのスキーマを削除します。
 テスト用接続ユーザーにはスキーマの作成・削除権限が必要です。
-既存のアプリテーブルは変更しません。ブラウザー操作の E2E は含みません。
+既存のアプリテーブルは変更しません。ブラウザー操作は次の E2E スイートで確認できます。
 
 `rtk make lint` は `golangci-lint run --fix` を実行します。
 golangci-lint のバージョンは `mise.toml` で固定し、`.golangci.yml` で標準の linter と gofmt・goimports を有効にしています。
@@ -220,6 +220,24 @@ GitHub Actions の [CI](.github/workflows/ci.yml) は push・pull request 時に
 - Lint: `make lint` 後に差分を検査し、自動修正や画面生成による変更が残る場合は失敗します。
 - Unit test: `make test` で race detector 付きのテストを実行します。DB サービスは起動せず、PostgreSQL 統合テストは skip します。
 - PostgreSQL integration test: PostgreSQL 18 を起動し、`TEST_DATABASE_URL` を設定して race detector 付きで統合テストを実行します。
+
+- Browser E2E: PostgreSQL 18 に開発用データを投入し、Chromium でログイン、商品・SKU の変更、オペレーターへの権限拒否を検証します。
+
+### ブラウザー E2E をローカルで実行
+
+空のテスト用 PostgreSQL DB を作り、その接続先を `DATABASE_URL` に指定します。E2E は商品と SKU を作成・更新します。
+
+```sh
+npm ci --prefix assets
+npm ci --prefix e2e
+(cd e2e && npx playwright install chromium)
+make build
+bin/go-todo --env development db up
+bin/go-todo --env development db seed
+npm test --prefix e2e
+```
+
+Playwright が `127.0.0.1:18082` でアプリを起動します。システムの Chromium を使用する場合は `E2E_CHROMIUM_PATH` に実行ファイルのパスを指定できます。
 
 ## 画面の開発（templ）
 

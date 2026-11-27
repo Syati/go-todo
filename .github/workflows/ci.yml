@@ -68,3 +68,42 @@ jobs:
         env:
           TEST_DATABASE_URL: postgres://go_todo:ci-test-only@127.0.0.1:${{ job.services.postgres.ports[5432] }}/go_todo_test?sslmode=disable
         run: go test -race ./...
+
+  browser-e2e:
+    name: Browser E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: go_todo_e2e
+          POSTGRES_USER: go_todo
+          POSTGRES_PASSWORD: ci-test-only
+        ports:
+          - 5432/tcp
+        options: >-
+          --health-cmd "pg_isready -U go_todo -d go_todo_e2e"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.2.8
+        with:
+          install_args: go node
+      - name: Install frontend and test dependencies
+        run: |
+          npm ci --prefix assets
+          npm ci --prefix e2e
+      - name: Install Chromium
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+      - name: Build application and run browser tests
+        env:
+          DATABASE_URL: postgres://go_todo:ci-test-only@127.0.0.1:${{ job.services.postgres.ports[5432] }}/go_todo_e2e?sslmode=disable
+        run: |
+          make build
+          bin/go-todo --env development db up
+          bin/go-todo --env development db seed
+          npm test --prefix e2e
