@@ -41,7 +41,7 @@ WantedBy=multi-user.target
 
 ## リリースする
 
-1. 前回のリビジョン、起動時のバージョン、DB の `db status` を記録します。SQL の変更があれば、旧バイナリとの互換性と、復元できるバックアップを確認します。非互換の変更は書き込み停止中に行います。
+1. 前回のリビジョン、起動時のバージョン、DB の `db status` を記録します。SQL の変更があれば、旧バイナリとの互換性と、[復元できるバックアップ](backup-restore.md) を確認します。非互換の変更は書き込み停止中に行います。
 2. 新バイナリのハッシュと `--version` を照合します。DB のシークレットを注入した環境で、新バイナリの `--env production db up` を実行し、`db status` で適用結果を確認します。初回だけ、空の DB で `admin bootstrap` を実行します。
 3. `systemctl stop go-todo` で旧プロセスを停止し、`current` を新リビジョンへ切り替えて `systemctl start go-todo` を実行します。初回は停止を省略できます。
 4. `journalctl -u go-todo -n 30` でバージョンを確認します。HTTPS 経由の `/up` が 200 を返し、管理者でログインして商品一覧が開くことを確認します。
