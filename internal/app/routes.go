@@ -46,6 +46,7 @@ func (a *App) routes() *echo.Echo {
 	e.GET("/up", a.health)
 
 	e.GET("/auth/sign_in", a.login)
+	e.HEAD("/auth/sign_in", a.login)
 	e.POST("/auth/sign_in", a.login)
 	authenticated := e.Group("")
 	authenticated.Use(a.requireAdmin(false))

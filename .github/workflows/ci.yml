@@ -40,3 +40,31 @@ jobs:
         run: npm ci --prefix assets
       - name: Run unit tests with race detector
         run: make test
+
+  postgres-test:
+    name: PostgreSQL integration test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: go_todo_test
+          POSTGRES_USER: go_todo
+          POSTGRES_PASSWORD: ci-test-only
+        ports:
+          - 5432/tcp
+        options: >-
+          --health-cmd "pg_isready -U go_todo -d go_todo_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: jdx/mise-action@v5.2.8
+        with:
+          install_args: go
+      - name: Run PostgreSQL integration tests with race detector
+        env:
+          TEST_DATABASE_URL: postgres://go_todo:ci-test-only@127.0.0.1:${{ job.services.postgres.ports[5432] }}/go_todo_test?sslmode=disable
+        run: go test -race ./...

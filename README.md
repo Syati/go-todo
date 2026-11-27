@@ -198,6 +198,7 @@ GitHub Actions の [CI](.github/workflows/ci.yml) は push・pull request 時に
 
 - Lint: `make lint` 後に差分を検査し、自動修正や画面生成による変更が残る場合は失敗します。
 - Unit test: `make test` で race detector 付きのテストを実行します。DB サービスは起動せず、PostgreSQL 統合テストは skip します。
+- PostgreSQL integration test: PostgreSQL 18 を起動し、`TEST_DATABASE_URL` を設定して race detector 付きで統合テストを実行します。
 
 ## 画面の開発（templ）
 
