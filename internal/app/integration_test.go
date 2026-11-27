@@ -22,6 +22,12 @@ import (
 // Each run owns an isolated schema. No existing application tables are touched.
 func testApp(t *testing.T) *App {
 	t.Helper()
+	a, _ := testAppWithDSN(t)
+	return a
+}
+
+func testAppWithDSN(t *testing.T) (*App, string) {
+	t.Helper()
 	dsn := os.Getenv("TEST_DATABASE_URL")
 	if dsn == "" {
 		t.Skip("TEST_DATABASE_URL is required for PostgreSQL integration tests")
@@ -54,7 +60,7 @@ func testApp(t *testing.T) *App {
 	require.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, a.Close()) })
 	require.NoError(t, a.Bootstrap(ctx, "admin@example.test", "test-password-123"))
-	return a
+	return a, u.String()
 }
 
 type browser struct {
@@ -263,7 +269,7 @@ func TestSessionCleanupWithoutLogin(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		a.RunSessionCleanup(ctx)
+		a.RunAuthCleanup(ctx)
 	}()
 	t.Cleanup(func() {
 		cancel()
@@ -277,4 +283,46 @@ func TestSessionCleanupWithoutLogin(t *testing.T) {
 	}, 5*time.Second, 10*time.Millisecond)
 	_, err = a.queries.FindSessionAdmin(ctx, "active")
 	require.NoError(t, err)
+}
+
+func TestLoginLimitAcrossInstances(t *testing.T) {
+	a, dsn := testAppWithDSN(t)
+	ctx := t.Context()
+	peer, err := Open(ctx, dsn, false)
+	require.NoError(t, err)
+	browsers := []*browser{newBrowser(t, a), newBrowser(t, peer)}
+	for _, b := range browsers {
+		require.Equal(t, http.StatusOK, b.request("GET", "/auth/sign_in", nil).Code)
+	}
+	for i := range 5 {
+		res := browsers[i%len(browsers)].request("POST", "/auth/sign_in", url.Values{
+			"email": {" ADMIN@example.test "}, "password": {"wrong"},
+		})
+		require.Equal(t, http.StatusUnprocessableEntity, res.Code)
+	}
+	check := func(b *browser) {
+		t.Helper()
+		res := b.request("POST", "/auth/sign_in", url.Values{
+			"email": {"admin@example.test"}, "password": {"test-password-123"},
+		})
+		require.Equal(t, http.StatusTooManyRequests, res.Code)
+	}
+	for _, b := range browsers {
+		check(b)
+	}
+	require.NoError(t, peer.Close())
+
+	restarted, err := Open(ctx, dsn, false)
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, restarted.Close()) })
+	b := newBrowser(t, restarted)
+	require.Equal(t, http.StatusOK, b.request("GET", "/auth/sign_in", nil).Code)
+	check(b)
+
+	_, err = a.db.ExecContext(ctx, "UPDATE login_attempts SET expires_at = now() - interval '1 second'")
+	require.NoError(t, err)
+	b.login("admin@example.test")
+	var count int
+	require.NoError(t, a.db.QueryRowContext(ctx, "SELECT count(*) FROM login_attempts").Scan(&count))
+	assert.Zero(t, count)
 }

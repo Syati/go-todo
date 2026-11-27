@@ -39,7 +39,7 @@ func serve(ctx context.Context, cfg config.Config) (runErr error) {
 	cleanupDone := make(chan struct{})
 	go func() {
 		defer close(cleanupDone)
-		application.RunSessionCleanup(cleanupCtx)
+		application.RunAuthCleanup(cleanupCtx)
 	}()
 	defer func() {
 		stopCleanup()
