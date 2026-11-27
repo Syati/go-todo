@@ -161,6 +161,19 @@ Cookie は HttpOnly / SameSite=Lax、状態を変更するフォームは CSRF �
 
 レスポンスの `X-Request-ID` と同じ ID でアクセスログや 5xx の原因ログを検索できます。受信した ID は半角英数字と `.`、`_`、`-` だけで構成される 1〜64 文字の場合に採用します。
 
+## 管理操作の監査
+
+管理者の作成・更新・削除と、商品・SKU の更新・削除は、変更内容と同じ DB トランザクションで `audit_events` に記録します。表には実行時刻、操作者の管理者 ID、操作種別、対象の種別と ID が入り、権限変更では変更前後のロールも記録します。
+
+監査時に DB の参照権限を持つ運用担当者は、対象時刻の履歴を次のように検索できます。
+
+```sql
+SELECT occurred_at, actor_admin_id, action, target_type, target_id, previous_role, new_role
+FROM audit_events
+WHERE occurred_at >= now() - interval '1 day'
+ORDER BY occurred_at DESC, id DESC;
+```
+
 ## SQL の変更
 
 ```sh

@@ -4,9 +4,13 @@ import (
 	"bytes"
 	"crypto/rand"
 	"database/sql"
+	"io/fs"
 	"net/url"
 	"os"
+	"path"
 	"testing"
+
+	"go-todo/db/migrations"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,10 +50,18 @@ func TestEmbeddedMigrationsOutsideRepository(t *testing.T) {
 		require.NoError(t, cmd.Execute())
 		return out.String()
 	}
+	files, err := fs.Glob(migrations.Files, "*.sql")
+	require.NoError(t, err)
+	require.NotEmpty(t, files)
 	assert.Contains(t, run("status"), "pending")
-	assert.Contains(t, run("up"), "00001_initial.sql")
-	assert.Contains(t, run("status"), "applied")
+	applied := run("up")
+	for _, file := range files {
+		assert.Contains(t, applied, path.Base(file))
+	}
+	assert.NotContains(t, run("status"), "pending")
 	assert.Empty(t, run("up"), "applying already-applied migrations is a no-op")
-	assert.Contains(t, run("down"), "00001_initial.sql")
-	assert.Contains(t, run("status"), "pending")
+	for i := len(files) - 1; i >= 0; i-- {
+		assert.Contains(t, run("down"), path.Base(files[i]))
+	}
+	assert.NotContains(t, run("status"), "applied")
 }

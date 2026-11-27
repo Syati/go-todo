@@ -45,8 +45,8 @@ func testApp(t *testing.T) *App {
 	require.NoError(t, err)
 	require.NoError(t, goose.SetDialect("postgres"))
 	require.NoError(t, goose.UpContext(ctx, isolated, "../../db/migrations"))
-	// Round trip the initial migration on the isolated, empty schema.
-	require.NoError(t, goose.DownContext(ctx, isolated, "../../db/migrations"))
+	// Round trip the migrations on the isolated, empty schema.
+	require.NoError(t, goose.DownToContext(ctx, isolated, "../../db/migrations", 0))
 	require.NoError(t, goose.UpContext(ctx, isolated, "../../db/migrations"))
 	require.NoError(t, isolated.Close())
 	a, err := Open(ctx, u.String(), false)
@@ -179,6 +179,48 @@ func TestConsoleWithPostgres(t *testing.T) {
 	assert.ErrorIs(t, err, sql.ErrNoRows)
 	assert.Equal(t, 303, b.request("POST", adminPath+"/delete", nil).Code)
 	assert.Equal(t, 303, op.request("GET", "/", nil).Code, "discarded admin loses access immediately")
+	// Failed account saves leave no history, while a successful role change
+	// records the database roles before and after the transaction.
+	w = b.request("POST", "/console/admins", url.Values{"email": {"reviewer@example.test"}, "password": {"test-password-123"}, "password_confirmation": {"test-password-123"}})
+	require.Equal(t, 303, w.Code, w.Body.String())
+	reviewerPath := w.Header().Get("Location")
+	reviewer, err := a.queries.FindLoginAdmin(ctx, "reviewer@example.test")
+	require.NoError(t, err)
+	w = b.request("POST", reviewerPath, url.Values{"email": {current.Email}, "role": {"super_admin"}})
+	require.Equal(t, 422, w.Code, w.Body.String())
+	w = b.request("POST", reviewerPath, url.Values{"email": {reviewer.Email}, "role": {"super_admin"}})
+	require.Equal(t, 303, w.Code, w.Body.String())
+
+	rows, err := a.db.QueryContext(ctx, `SELECT actor_admin_id, action, target_type,
+		target_id, coalesce(previous_role, ''), coalesce(new_role, ''), occurred_at IS NOT NULL
+		FROM audit_events ORDER BY id`)
+	require.NoError(t, err)
+	defer func() { _ = rows.Close() }()
+	type event struct {
+		action, target, before, after string
+		id                            int64
+	}
+	var events []event
+	for rows.Next() {
+		var item event
+		var actor int64
+		var hasTime bool
+		require.NoError(t, rows.Scan(&actor, &item.action, &item.target, &item.id, &item.before, &item.after, &hasTime))
+		assert.Equal(t, current.ID, actor)
+		assert.True(t, hasTime)
+		events = append(events, item)
+	}
+	require.NoError(t, rows.Err())
+	assert.Equal(t, []event{
+		{action: "update", target: "product", id: products[0].ID},
+		{action: "update", target: "sku", id: skus[0].ID},
+		{action: "delete", target: "sku", id: skus[0].ID},
+		{action: "delete", target: "product", id: products[0].ID},
+		{action: "create", target: "admin", id: operator.ID},
+		{action: "delete", target: "admin", id: operator.ID},
+		{action: "create", target: "admin", id: reviewer.ID},
+		{action: "update", target: "admin", id: reviewer.ID, before: "operator", after: "super_admin"},
+	}, events)
 	assert.Equal(t, 303, b.request("POST", "/auth/sign_out", nil).Code)
 	assert.Equal(t, 303, b.request("GET", "/", nil).Code)
 }

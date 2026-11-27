@@ -109,7 +109,9 @@ func (a *App) saveProduct(c *echo.Context) error {
 	if p.ID == 0 {
 		p.ID, err = a.queries.CreateProduct(c.Request().Context(), store.CreateProductParams{Name: p.Name, Description: p.Description, Status: p.Status, TaxRate: p.TaxRate})
 	} else {
-		err = a.queries.UpdateProduct(c.Request().Context(), store.UpdateProductParams{ID: p.ID, Name: p.Name, Description: p.Description, Status: p.Status, TaxRate: p.TaxRate})
+		err = a.auditedMutation(c, func(q *store.Queries) error {
+			return q.UpdateProduct(c.Request().Context(), store.UpdateProductParams{ID: p.ID, Name: p.Name, Description: p.Description, Status: p.Status, TaxRate: p.TaxRate})
+		})
 	}
 	if err != nil {
 		return err
@@ -122,7 +124,9 @@ func (a *App) deleteProduct(c *echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := a.queries.DeleteProduct(c.Request().Context(), p.ID); err != nil {
+	if err := a.auditedMutation(c, func(q *store.Queries) error {
+		return q.DeleteProduct(c.Request().Context(), p.ID)
+	}); err != nil {
 		return err
 	}
 	return redirect(c, "/console/products")
@@ -186,7 +190,9 @@ func (a *App) saveSKU(c *echo.Context) error {
 		if s.ID == 0 {
 			err = a.queries.CreateSKU(c.Request().Context(), store.CreateSKUParams{ProductID: s.ProductID, Code: s.Code, Size: s.Size, Color: s.Color, PriceYen: s.PriceYen, StockQuantity: s.StockQuantity})
 		} else {
-			err = a.queries.UpdateSKU(c.Request().Context(), store.UpdateSKUParams{ID: s.ID, ProductID: s.ProductID, Code: s.Code, Size: s.Size, Color: s.Color, PriceYen: s.PriceYen, StockQuantity: s.StockQuantity})
+			err = a.auditedMutation(c, func(q *store.Queries) error {
+				return q.UpdateSKU(c.Request().Context(), store.UpdateSKUParams{ID: s.ID, ProductID: s.ProductID, Code: s.Code, Size: s.Size, Color: s.Color, PriceYen: s.PriceYen, StockQuantity: s.StockQuantity})
+			})
 		}
 		if err != nil {
 			var pgErr interface{ SQLState() string }
@@ -212,7 +218,9 @@ func (a *App) deleteSKU(c *echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := a.queries.DeleteSKU(c.Request().Context(), store.DeleteSKUParams{ID: s.ID, ProductID: p.ID}); err != nil {
+	if err := a.auditedMutation(c, func(q *store.Queries) error {
+		return q.DeleteSKU(c.Request().Context(), store.DeleteSKUParams{ID: s.ID, ProductID: p.ID})
+	}); err != nil {
 		return err
 	}
 	return redirect(c, fmt.Sprintf("/console/products/%d", p.ID))
