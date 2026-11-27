@@ -1,0 +1,42 @@
+data_dir: /var/lib/vector
+
+sources:
+  access_logs:
+    type: file
+    include: ["/logs/http.jsonl"]
+    read_from: end
+
+transforms:
+  parse_access_logs:
+    type: remap
+    inputs: [access_logs]
+    drop_on_error: true
+    drop_on_abort: true
+    source: |
+      . = parse_json!(string!(.message))
+      if .msg != "http request" || .route == "/up" { abort }
+      status = to_int!(.status)
+      .server_error = if status >= 500 && status <= 599 { 1 } else { 0 }
+      .duration_seconds = to_float!(.duration_us) / 1000000.0
+
+  http_metrics:
+    type: log_to_metric
+    inputs: [parse_access_logs]
+    metrics:
+      - type: counter
+        field: duration_seconds
+        name: go_todo_http_responses_total
+      - type: counter
+        field: server_error
+        name: go_todo_http_5xx_total
+        increment_by_value: true
+      - type: histogram
+        field: duration_seconds
+        name: go_todo_http_request_duration_seconds
+
+sinks:
+  metrics:
+    type: prometheus_exporter
+    inputs: [http_metrics]
+    address: 0.0.0.0:9598
+    buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30]

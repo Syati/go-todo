@@ -1,0 +1,47 @@
+services:
+  vector:
+    image: timberio/vector:0.49.0-debian
+    command: ["--config", "/etc/vector/vector.yaml"]
+    volumes:
+      - ./vector.yaml:/etc/vector/vector.yaml:ro
+      - ${GO_TODO_LOG_DIR:?set GO_TODO_LOG_DIR}:/logs:ro
+      - vector-data:/var/lib/vector
+    restart: unless-stopped
+
+  blackbox:
+    image: prom/blackbox-exporter:v0.27.0
+    command: ["--config.file=/etc/blackbox/blackbox.yml"]
+    volumes:
+      - ./blackbox.yml:/etc/blackbox/blackbox.yml:ro
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=14d
+    ports:
+      - "127.0.0.1:19090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./rules.yml:/etc/prometheus/rules.yml:ro
+      - ${GO_TODO_PROBE_TARGETS:?set GO_TODO_PROBE_TARGETS}:/etc/prometheus/probe-targets.yml:ro
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ${GO_TODO_ALERT_URL_FILE:?set GO_TODO_ALERT_URL_FILE}:/run/secrets/go_todo_alert_url:ro
+      - alertmanager-data:/alertmanager
+    restart: unless-stopped
+
+volumes:
+  vector-data:
+  prometheus-data:
+  alertmanager-data:
