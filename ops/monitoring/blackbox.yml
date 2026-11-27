@@ -1,0 +1,7 @@
+modules:
+  go_todo_up:
+    prober: http
+    timeout: 5s
+    http:
+      valid_status_codes: [200]
+      follow_redirects: false

@@ -1,0 +1,26 @@
+groups:
+  - name: go-todo
+    rules:
+      - record: go_todo:http_5xx_ratio:rate5m
+        expr: sum(rate(go_todo_http_5xx_total[5m])) / sum(rate(go_todo_http_responses_total[5m]))
+
+      - record: go_todo:http_duration_p95_seconds:rate5m
+        expr: histogram_quantile(0.95, sum by (le) (rate(go_todo_http_request_duration_seconds_bucket[5m])))
+
+      - alert: GoTodoHTTPServerErrors
+        expr: go_todo:http_5xx_ratio:rate5m > 0.05
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Go Todo の HTTP 5xx 率が 5% を超えています"
+          description: "5 分間の HTTP 5xx 率は {{ $value | humanizePercentage }} です。"
+
+      - alert: GoTodoHealthProbeFailed
+        expr: probe_success{job="go-todo-up"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Go Todo の /up が連続して失敗しました"
+          description: "{{ $labels.instance }} が 200 を返していません。DB 接続とサーバーの状態を確認してください。"
