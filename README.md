@@ -20,7 +20,7 @@
 商品ステータスは `draft` / `on_sale` / `discontinued`、税率は 8% / 10% です。
 SKU の価格は 0〜10,000,000 円、在庫は 0 以上の整数です。
 
-OAuth / JSON API、メール確認、メールによるパスワード再設定、OmniAuth、多言語化、Rails 側のデプロイ構成は未移植です。
+OAuth / JSON API、メール確認、メールによるパスワード再設定、OmniAuth、多言語化、Rails 側のデプロイ構成は未移植です。 認証・API 機能の採否は [Rails 版からの移植判断](docs/rails-parity.md) を参照してください。
 
 ## ローカル起動
 
