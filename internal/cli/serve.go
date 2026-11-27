@@ -35,6 +35,16 @@ func serve(ctx context.Context, cfg config.Config) (runErr error) {
 		return err
 	}
 	defer func() { runErr = errors.Join(runErr, application.Close()) }()
+	cleanupCtx, stopCleanup := context.WithCancel(ctx)
+	cleanupDone := make(chan struct{})
+	go func() {
+		defer close(cleanupDone)
+		application.RunSessionCleanup(cleanupCtx)
+	}()
+	defer func() {
+		stopCleanup()
+		<-cleanupDone
+	}()
 	address := cfg.Addr
 	startConfig := echo.StartConfig{
 		Address:         address,
