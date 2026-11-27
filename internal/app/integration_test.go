@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"go-todo/internal/store"
 
@@ -246,4 +247,34 @@ func TestLoginCSRFAndRateLimit(t *testing.T) {
 	w = httptest.NewRecorder()
 	b.handler.ServeHTTP(w, r)
 	assert.Equal(t, 403, w.Code)
+}
+
+func TestSessionCleanupWithoutLogin(t *testing.T) {
+	a := testApp(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	admin, err := a.queries.FindLoginAdmin(ctx, "admin@example.test")
+	require.NoError(t, err)
+	_, err = a.db.ExecContext(ctx, "INSERT INTO sessions (token_hash, admin_id, expires_at) VALUES ('expired', $1, now() - interval '1 day')", admin.ID)
+	require.NoError(t, err)
+	require.NoError(t, a.queries.CreateSession(ctx, store.CreateSessionParams{TokenHash: "active", AdminID: admin.ID}))
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		a.RunSessionCleanup(ctx)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		<-done
+	})
+
+	require.Eventually(t, func() bool {
+		var exists bool
+		err := a.db.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM sessions WHERE token_hash = 'expired')").Scan(&exists)
+		return err == nil && !exists
+	}, 5*time.Second, 10*time.Millisecond)
+	_, err = a.queries.FindSessionAdmin(ctx, "active")
+	require.NoError(t, err)
 }

@@ -213,20 +213,7 @@ func (a *App) login(c *echo.Context) error {
 		return a.render(c, authviews.Login(a.viewData(c, "title.login"), a.message(c, "error.login_invalid")), http.StatusUnprocessableEntity)
 	}
 	token := randomToken()
-	tx, err := a.db.BeginTx(c.Request().Context(), nil)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }() // Commit 後の ErrTxDone は無視する。
-	q := a.queries.WithTx(tx)
-	err = q.DeleteExpiredSessions(c.Request().Context())
-	if err == nil {
-		err = q.CreateSession(c.Request().Context(), store.CreateSessionParams{TokenHash: tokenHash(token), AdminID: admin.ID})
-	}
-	if err == nil {
-		err = tx.Commit()
-	}
-	if err != nil {
+	if err := a.queries.CreateSession(c.Request().Context(), store.CreateSessionParams{TokenHash: tokenHash(token), AdminID: admin.ID}); err != nil {
 		return err
 	}
 	a.mu.Lock()
