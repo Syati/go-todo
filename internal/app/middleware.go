@@ -3,7 +3,6 @@ package app
 import (
 	"database/sql"
 	"errors"
-	"log/slog"
 	"net/http"
 
 	"go-todo/internal/i18n"
@@ -65,7 +64,7 @@ func (a *App) handleHTTPError(c *echo.Context, err error) {
 		}
 	}
 	if status >= http.StatusInternalServerError {
-		slog.Error("request failed", "error", err)
+		c.Logger().ErrorContext(c.Request().Context(), "request failed", "error", err)
 	}
 	_ = c.String(status, message)
 }
