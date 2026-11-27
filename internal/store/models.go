@@ -49,6 +49,12 @@ type CatalogSku struct {
 	StockQuantity int64
 }
 
+type LoginAttempt struct {
+	IdentityHash string
+	Attempts     int
+	ExpiresAt    time.Time
+}
+
 type Session struct {
 	TokenHash string
 	AdminID   int64

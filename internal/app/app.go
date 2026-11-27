@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"go-todo/internal/i18n"
@@ -31,15 +30,9 @@ type App struct {
 	db           *sql.DB
 	queries      *store.Queries
 	secure       bool
-	mu           sync.Mutex
-	attempts     map[string]attempt
 	dummyHash    []byte
 	translations *i18n.Bundle
 	router       *echo.Echo
-}
-type attempt struct {
-	Count int
-	Until time.Time
 }
 
 func Open(ctx context.Context, url string, secure bool) (*App, error) {
@@ -66,7 +59,7 @@ func Open(ctx context.Context, url string, secure bool) (*App, error) {
 	if err != nil {
 		return nil, errors.Join(err, db.Close())
 	}
-	application := &App{db: db, queries: store.New(db), secure: secure, attempts: map[string]attempt{}, dummyHash: dummy, translations: translations}
+	application := &App{db: db, queries: store.New(db), secure: secure, dummyHash: dummy, translations: translations}
 	application.router = application.routes()
 	return application, nil
 }
@@ -181,26 +174,16 @@ func (a *App) login(c *echo.Context) error {
 		return a.render(c, authviews.Login(a.viewData(c, "title.login"), ""), http.StatusOK)
 	}
 	email := strings.ToLower(strings.TrimSpace(c.FormValue("email")))
-	// Bound the in-process limiter, including attempts for unknown accounts.
-	a.mu.Lock()
-	now := time.Now()
-	for key, item := range a.attempts {
-		if now.After(item.Until) {
-			delete(a.attempts, key)
-		}
-	}
-	item := a.attempts[email]
-	if item.Count >= 5 || (len(a.attempts) >= 10000 && item.Count == 0) {
-		a.mu.Unlock()
+	ctx := c.Request().Context()
+	identityHash := tokenHash(email)
+	expiresAt, err := a.queries.ReserveLoginAttempt(ctx, identityHash)
+	if errors.Is(err, sql.ErrNoRows) {
 		return a.render(c, authviews.Login(a.viewData(c, "title.login"), a.message(c, "error.login_throttled")), http.StatusTooManyRequests)
 	}
-	item.Count++
-	if item.Until.IsZero() {
-		item.Until = now.Add(15 * time.Minute)
+	if err != nil {
+		return err
 	}
-	a.attempts[email] = item
-	a.mu.Unlock()
-	admin, err := a.queries.FindLoginAdmin(c.Request().Context(), email)
+	admin, err := a.queries.FindLoginAdmin(ctx, email)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
@@ -213,12 +196,21 @@ func (a *App) login(c *echo.Context) error {
 		return a.render(c, authviews.Login(a.viewData(c, "title.login"), a.message(c, "error.login_invalid")), http.StatusUnprocessableEntity)
 	}
 	token := randomToken()
-	if err := a.queries.CreateSession(c.Request().Context(), store.CreateSessionParams{TokenHash: tokenHash(token), AdminID: admin.ID}); err != nil {
+	tx, err := a.db.BeginTx(ctx, nil)
+	if err != nil {
 		return err
 	}
-	a.mu.Lock()
-	delete(a.attempts, email)
-	a.mu.Unlock()
+	defer func() { _ = tx.Rollback() }()
+	q := a.queries.WithTx(tx)
+	if err := q.CreateSession(ctx, store.CreateSessionParams{TokenHash: tokenHash(token), AdminID: admin.ID}); err != nil {
+		return err
+	}
+	if err := q.ResetLoginAttempts(ctx, store.ResetLoginAttemptsParams{IdentityHash: identityHash, ExpiresAt: expiresAt}); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
 	a.cookie(c, "session", token, 12*3600)
 	a.cookie(c, "csrf", randomToken(), 0)
 	return redirect(c, "/")
