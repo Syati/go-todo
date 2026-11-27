@@ -58,7 +58,7 @@ func serve(ctx context.Context, cfg config.Config) (runErr error) {
 			return nil
 		},
 	}
-	slog.Info("listening", "address", address)
+	slog.Info("listening", "address", address, "version", buildVersion())
 	err = startConfig.Start(ctx, application.Echo())
 	if errors.Is(err, http.ErrServerClosed) {
 		return nil

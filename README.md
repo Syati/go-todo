@@ -117,6 +117,8 @@ rtk proxy ./go-todo --env production db up
 rtk proxy ./go-todo --env production serve
 ```
 
+本番への配布と切り戻しは [デプロイ手順](docs/deployment.md) を参照してください。
+
 外部ファイルなしで起動でき、`--config-dir` や環境変数で設定を変更できます。
 `.local.yml` は埋め込みません。埋め込み対象を変更した場合は再ビルドしてください。
 
