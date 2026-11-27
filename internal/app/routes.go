@@ -15,9 +15,11 @@ import (
 )
 
 func (a *App) routes() *echo.Echo {
-	e := echo.New()
+	e := echo.NewWithConfig(echo.Config{Logger: slog.Default()})
 	e.HTTPErrorHandler = a.handleHTTPError
-	e.Use(middleware.Recover())
+	e.Use(middleware.RequestIDWithConfig(middleware.RequestIDConfig{RequestIDHandler: setRequestLogger}))
+	e.Use(logRequests())
+	e.Use(middleware.RecoverWithConfig(middleware.RecoverConfig{DisableStackAll: true}))
 	e.Use(a.localize)
 	e.Use(middleware.BodyLimit(64 << 10))
 	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
@@ -48,14 +50,13 @@ func (a *App) routes() *echo.Echo {
 	e.GET("/auth/sign_in", a.login)
 	e.HEAD("/auth/sign_in", a.login)
 	e.POST("/auth/sign_in", a.login)
-	authenticated := e.Group("")
-	authenticated.Use(a.requireAdmin(false))
-	authenticated.POST("/auth/sign_out", a.logout)
-	authenticated.GET("/", a.dashboard)
-	authenticated.GET("/faq", a.faq)
+	requireAdmin := a.requireAdmin(false)
+	e.POST("/auth/sign_out", a.logout, requireAdmin)
+	e.GET("/", a.dashboard, requireAdmin)
+	e.GET("/faq", a.faq, requireAdmin)
 
 	console := e.Group("/console")
-	console.Use(a.requireAdmin(false))
+	console.Use(requireAdmin)
 	products := console.Group("/products")
 	products.GET("", a.products)
 	products.GET("/new", a.productForm)
@@ -88,7 +89,7 @@ func (a *App) health(c *echo.Context) error {
 	ctx, cancel := context.WithTimeout(c.Request().Context(), time.Second)
 	defer cancel()
 	if err := a.db.PingContext(ctx); err != nil {
-		slog.Warn("health check failed", "error", err)
+		c.Logger().WarnContext(ctx, "health check failed", "error", err)
 		return c.String(http.StatusServiceUnavailable, "unavailable\n")
 	}
 	return c.String(http.StatusOK, "ok\n")
