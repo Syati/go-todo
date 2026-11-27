@@ -28,3 +28,8 @@ WHERE id=sqlc.arg(id) AND deleted_at IS NULL;
 
 -- name: DiscardAdmin :exec
 UPDATE admins SET deleted_at=now() WHERE id=$1;
+
+-- name: LockLoginAdminCredentials :one
+SELECT id FROM admins
+WHERE id = $1 AND password_hash = $2 AND deleted_at IS NULL
+FOR SHARE;

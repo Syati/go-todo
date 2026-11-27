@@ -18,6 +18,13 @@ type Admin struct {
 	CreatedAt    time.Time
 }
 
+type AdminRecoveryEvent struct {
+	ID          int64
+	OccurredAt  time.Time
+	AdminID     int64
+	OperatorRef string
+}
+
 type AuditEvent struct {
 	ID           int64
 	OccurredAt   time.Time

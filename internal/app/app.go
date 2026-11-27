@@ -202,6 +202,14 @@ func (a *App) login(c *echo.Context) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 	q := a.queries.WithTx(tx)
+	// A password reset or account deletion may have committed during bcrypt.
+	_, err = q.LockLoginAdminCredentials(ctx, store.LockLoginAdminCredentialsParams{ID: admin.ID, PasswordHash: admin.PasswordHash})
+	if errors.Is(err, sql.ErrNoRows) {
+		return a.render(c, authviews.Login(a.viewData(c, "title.login"), a.message(c, "error.login_invalid")), http.StatusUnprocessableEntity)
+	}
+	if err != nil {
+		return err
+	}
 	if err := q.CreateSession(ctx, store.CreateSessionParams{TokenHash: tokenHash(token), AdminID: admin.ID}); err != nil {
 		return err
 	}
