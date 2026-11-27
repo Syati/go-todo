@@ -104,14 +104,16 @@ func TestConsoleWithPostgres(t *testing.T) {
 	ctx := context.Background()
 	b := newBrowser(t, a)
 	assert.Equal(t, 303, b.request("GET", "/", nil).Code)
-	assert.Equal(t, 403, b.request("POST", "/console/products", nil).Code)
+	w := b.request("POST", "/console/products", nil)
+	assert.Equal(t, http.StatusSeeOther, w.Code)
+	assert.Equal(t, "/auth/sign_in", w.Header().Get("Location"))
 	b.login("admin@example.test")
 	assert.Equal(t, 200, b.request("HEAD", "/auth/sign_in", nil).Code)
 	assert.Equal(t, 200, b.request("GET", "/", nil).Code)
 	for _, path := range []string{"/console/products", "/console/products/new", "/console/admins", "/console/admins/new", "/faq", "/up"} {
 		assert.Equal(t, 200, b.request("GET", path, nil).Code, path)
 	}
-	w := b.request("POST", "/console/products", url.Values{"name": {"<script>alert(1)</script> 椅子"}, "status": {"on_sale"}, "tax_rate": {"10"}})
+	w = b.request("POST", "/console/products", url.Values{"name": {"<script>alert(1)</script> 椅子"}, "status": {"on_sale"}, "tax_rate": {"10"}})
 	require.Equal(t, 303, w.Code, w.Body.String())
 	productPath := w.Header().Get("Location")
 	w = b.request("GET", productPath, nil)

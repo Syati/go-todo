@@ -40,22 +40,28 @@ func (a *App) handleHTTPError(c *echo.Context, err error) {
 	if unwrapErr == nil && response.Committed {
 		return
 	}
-	status := http.StatusInternalServerError
+	status := echo.StatusCode(err)
+	if status == 0 {
+		status = http.StatusInternalServerError
+	}
 	message := a.message(c, "error.internal")
 	var httpErr *echo.HTTPError
-	if errors.As(err, &httpErr) {
-		status = httpErr.Code
-		switch {
-		case errors.Is(err, middleware.ErrCSRFInvalid), errors.Is(err, echo.ErrBadRequest):
-			message = a.message(c, "error.csrf")
-		case httpErr.Message == "error.permission", httpErr.Message == "error.self_delete":
-			message = a.message(c, httpErr.Message)
-		case status == http.StatusNotFound:
-			message = http.StatusText(status)
-		case status == http.StatusRequestEntityTooLarge:
-			message = a.message(c, "error.invalid_input")
-		case status < http.StatusInternalServerError:
-			message = httpErr.Message
+	switch {
+	case errors.Is(err, middleware.ErrCSRFInvalid), errors.Is(err, echo.ErrBadRequest):
+		message = a.message(c, "error.csrf")
+	case status == http.StatusRequestEntityTooLarge:
+		message = a.message(c, "error.invalid_input")
+	case status == http.StatusNotFound:
+		message = http.StatusText(status)
+	case status < http.StatusInternalServerError:
+		message = http.StatusText(status)
+		if errors.As(err, &httpErr) {
+			switch httpErr.Message {
+			case "error.permission", "error.self_delete":
+				message = a.message(c, httpErr.Message)
+			default:
+				message = httpErr.Message
+			}
 		}
 	}
 	if status >= http.StatusInternalServerError {
